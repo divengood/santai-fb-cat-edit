@@ -187,16 +187,29 @@ class FacebookCatalogService {
      
      try {
         const batchResponses = await this.batchRequest(requests);
-        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+        const failures = batchResponses
+            .map((res: any, index: number) => ({ res, index }))
+            .filter(({ res }) => res && res.code !== 200);
 
-        if (failedResponses.length > 0) {
-            let errorMessage = 'One or more products failed to be added.';
-            try {
-                const errorBody = JSON.parse(failedResponses[0].body);
-                if (errorBody.error && errorBody.error.message) {
-                    errorMessage = errorBody.error.message;
+        if (failures.length > 0) {
+            const errorDetails = failures.map(({ res, index }) => {
+                const originalRequestData = newProducts[index];
+                let detail = `- Product "${originalRequestData.name}" (SKU: ${originalRequestData.retailer_id}): `;
+                try {
+                    const errorBody = JSON.parse(res.body);
+                    if (errorBody.error && errorBody.error.message) {
+                        const { message, type, code, error_subcode } = errorBody.error;
+                        detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
+                    } else {
+                        detail += 'An unknown API error occurred.';
+                    }
+                } catch (e) { 
+                    detail += `Could not parse error response. Body: ${res.body}`;
                 }
-            } catch (e) { /* Ignore parsing error */ }
+                return detail;
+            }).join('\n');
+            
+            const errorMessage = `${failures.length} of ${newProducts.length} products failed to be added:\n${errorDetails}`;
             throw new Error(errorMessage);
         }
 
@@ -218,16 +231,28 @@ class FacebookCatalogService {
     
     try {
         const batchResponses = await this.batchRequest(requests);
-        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+        const failures = batchResponses
+            .map((res: any, index: number) => ({ res, index }))
+            .filter(({ res }) => res && res.code !== 200);
         
-        if (failedResponses.length > 0) {
-            let errorMessage = 'One or more products failed to be deleted.';
-            try {
-                const errorBody = JSON.parse(failedResponses[0].body);
-                if (errorBody.error && errorBody.error.message) {
-                    errorMessage = errorBody.error.message;
+        if (failures.length > 0) {
+            const errorDetails = failures.map(({ res, index }) => {
+                const productId = productIds[index];
+                let detail = `- Product ID ${productId}: `;
+                try {
+                    const errorBody = JSON.parse(res.body);
+                     if (errorBody.error && errorBody.error.message) {
+                        const { message, type, code, error_subcode } = errorBody.error;
+                        detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
+                    } else {
+                        detail += 'An unknown API error occurred.';
+                    }
+                } catch (e) {
+                     detail += `Could not parse error response. Body: ${res.body}`;
                 }
-            } catch (e) { /* Ignore parsing error */ }
+                return detail;
+            }).join('\n');
+            const errorMessage = `${failures.length} of ${productIds.length} products failed to be deleted:\n${errorDetails}`;
             throw new Error(errorMessage);
         }
         
@@ -365,16 +390,29 @@ class FacebookCatalogService {
     }));
     try {
         const batchResponses = await this.batchRequest(requests);
-        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+        const failures = batchResponses
+            .map((res: any, index: number) => ({ res, index }))
+            .filter(({ res }) => res && res.code !== 200);
 
-        if (failedResponses.length > 0) {
-            let errorMessage = 'One or more sets failed to be deleted.';
-            try {
-                const errorBody = JSON.parse(failedResponses[0].body);
-                if (errorBody.error && errorBody.error.message) {
-                    errorMessage = errorBody.error.message;
+        if (failures.length > 0) {
+            const errorDetails = failures.map(({ res, index }) => {
+                const setId = setIds[index];
+                let detail = `- Set ID ${setId}: `;
+                 try {
+                    const errorBody = JSON.parse(res.body);
+                     if (errorBody.error && errorBody.error.message) {
+                        const { message, type, code, error_subcode } = errorBody.error;
+                        detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
+                    } else {
+                        detail += 'An unknown API error occurred.';
+                    }
+                } catch (e) {
+                     detail += `Could not parse error response. Body: ${res.body}`;
                 }
-            } catch (e) { /* Ignore parsing error */ }
+                return detail;
+            }).join('\n');
+            
+            const errorMessage = `${failures.length} of ${setIds.length} sets failed to be deleted:\n${errorDetails}`;
             throw new Error(errorMessage);
         }
         
