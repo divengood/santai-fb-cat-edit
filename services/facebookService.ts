@@ -28,6 +28,11 @@ class FacebookCatalogService {
     const url = new URL(`${BASE_URL}${path}`);
     url.searchParams.append('access_token', this.apiToken);
 
+    // Cache-busting for GET requests to ensure fresh data
+    if (method === 'GET') {
+      url.searchParams.append('_', Date.now().toString());
+    }
+
     const options: RequestInit = {
       method,
     };
@@ -178,9 +183,10 @@ class FacebookCatalogService {
     if (productIds.length === 0) return new Map();
     this.logger?.info(`Refreshing statuses for ${productIds.length} product(s)...`);
     
+    const cacheBuster = `&_=${Date.now()}`;
     const requests: BatchRequest[] = productIds.map(id => ({
         method: 'GET',
-        relative_url: `${id}?fields=review_status,rejection_reasons`,
+        relative_url: `${id}?fields=review_status,rejection_reasons${cacheBuster}`,
     }));
     
     try {
