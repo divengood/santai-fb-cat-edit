@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
@@ -18,6 +18,16 @@ export const CreateSetModal: React.FC<CreateSetModalProps> = ({ onClose, service
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set(initiallySelectedProductIds));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
+  const [brandFilter, setBrandFilter] = useState('');
+
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter(product => {
+        const nameMatch = nameFilter ? product.name.toLowerCase().includes(nameFilter.toLowerCase()) : true;
+        const brandMatch = brandFilter ? product.brand.toLowerCase().includes(brandFilter.toLowerCase()) : true;
+        return nameMatch && brandMatch;
+    });
+  }, [allProducts, nameFilter, brandFilter]);
 
   const handleProductSelection = (productId: string) => {
     setSelectedProductIds(prev => {
@@ -51,6 +61,8 @@ export const CreateSetModal: React.FC<CreateSetModalProps> = ({ onClose, service
       setIsSubmitting(false);
     }
   };
+  
+  const inputStyles = "block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600";
 
   return (
      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
@@ -77,9 +89,13 @@ export const CreateSetModal: React.FC<CreateSetModalProps> = ({ onClose, service
                 </div>
                  <div>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Products ({selectedProductIds.size})</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
+                        <input type="text" placeholder="Filter by name..." value={nameFilter} onChange={e => setNameFilter(e.target.value)} className={inputStyles} />
+                        <input type="text" placeholder="Filter by brand..." value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className={inputStyles} />
+                    </div>
                      {allProducts.length > 0 ? (
-                        <ul className="mt-2 border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-80 overflow-y-auto">
-                            {allProducts.map(product => (
+                        <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-64 overflow-y-auto">
+                            {filteredProducts.map(product => (
                                 <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                     <div className="w-0 flex-1 flex items-center">
                                         <input

@@ -176,13 +176,13 @@ class FacebookCatalogService {
 
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
-    const path = `/${this.catalogId}/product_sets?fields=id,name,product_count`;
+    const path = `/${this.catalogId}/product_sets?fields=id,name,product_count,latest_product_items.limit(100){id}`;
     try {
         const response = await this.apiRequest(path);
         const sets: ProductSet[] = response.data.map((s: any) => ({
           id: s.id,
           name: s.name,
-          productIds: [], 
+          productIds: s.latest_product_items?.data.map((p: any) => p.id) || [],
         }));
         this.logger?.success(`Successfully fetched ${sets.length} product sets.`);
         return sets;
@@ -195,13 +195,15 @@ class FacebookCatalogService {
   async createSet(name: string, productIds: string[]): Promise<ProductSet> {
     this.logger?.info(`Creating new product set "${name}" with ${productIds.length} product(s)...`);
     try {
-        const newSetResponse = await this.apiRequest(`/${this.catalogId}/product_sets`, 'POST', { name });
-        const newSetId = newSetResponse.id;
-
+        const payload: { name: string; filter?: object } = { name };
         if (productIds.length > 0) {
-            this.logger?.info(`Adding ${productIds.length} product(s) to new set "${name}"...`);
-            await this.apiRequest(`/${newSetId}/products`, 'POST', { product_items: productIds });
+            payload.filter = {
+                product_item_id: { is_any: productIds }
+            };
         }
+
+        const newSetResponse = await this.apiRequest(`/${this.catalogId}/product_sets`, 'POST', payload);
+        const newSetId = newSetResponse.id;
         
         this.logger?.success(`Successfully created set "${name}" (ID: ${newSetId}).`);
         return { id: newSetId, name, productIds };
@@ -242,32 +244,18 @@ class FacebookCatalogService {
   }
   
   async updateSet(setId: string, name: string, productIds: string[]): Promise<ProductSet> {
-    this.logger?.info(`Updating set "${name}" (ID: ${setId})...`);
+    this.logger?.info(`Updating set "${name}" (ID: ${setId}) with ${productIds.length} products...`);
     try {
-        // 1. Update name
-        this.logger?.info(`Updating name for set ${setId} to "${name}".`);
-        await this.apiRequest(`/${setId}`, 'POST', { name });
+        const payload: { name: string; filter: object } = {
+            name,
+            // Use a filter that matches nothing if no products are selected,
+            // or a filter for the selected products.
+            filter: {
+                product_item_id: { is_any: productIds.length > 0 ? productIds : [] }
+            }
+        };
 
-        // 2. Get current products in set
-        this.logger?.info(`Fetching current products for set ${setId}.`);
-        const currentProductsResponse = await this.apiRequest(`/${setId}/products?fields=id&limit=1000`);
-        const currentProductIds: string[] = currentProductsResponse.data.map((p: any) => p.id);
-        const currentProductIdsSet = new Set(currentProductIds);
-        const newProductIdsSet = new Set(productIds);
-
-        // 3. Calculate differences
-        const idsToAdd = productIds.filter(id => !currentProductIdsSet.has(id));
-        const idsToRemove = currentProductIds.filter(id => !newProductIdsSet.has(id));
-        
-        // 4. Execute additions and removals
-        if (idsToRemove.length > 0) {
-            this.logger?.info(`Removing ${idsToRemove.length} product(s) from set ${setId}.`);
-            await this.apiRequest(`/${setId}/products`, 'DELETE', { product_items: idsToRemove });
-        }
-        if (idsToAdd.length > 0) {
-            this.logger?.info(`Adding ${idsToAdd.length} product(s) to set ${setId}.`);
-            await this.apiRequest(`/${setId}/products`, 'POST', { product_items: idsToAdd });
-        }
+        await this.apiRequest(`/${setId}`, 'POST', payload);
         
         this.logger?.success(`Successfully updated set "${name}".`);
         return { id: setId, name, productIds };
