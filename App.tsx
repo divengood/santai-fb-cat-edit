@@ -7,6 +7,8 @@ import { AuthScreen } from './components/AuthScreen';
 import { LogEntry } from './types';
 import { Logger } from './services/loggingService';
 import { LogViewer } from './components/LogViewer';
+import { useToast } from './hooks/useToast';
+import { ToastContainer } from './components/ToastContainer';
 
 // Make FB object available from the script loaded in index.html
 declare const FB: any;
@@ -40,7 +42,8 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>(View.PRODUCTS);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
-  const logger = useMemo(() => new Logger(setLogs), [setLogs]);
+  const { toasts, addToast, removeToast } = useToast();
+  const logger = useMemo(() => new Logger(setLogs, addToast), [setLogs, addToast]);
 
   useEffect(() => {
     if (credentials) {
@@ -98,6 +101,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <Header onDisconnect={handleDisconnect} />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
@@ -149,6 +153,7 @@ const App: React.FC = () => {
                 cloudinaryCloudName={credentials.cloudinaryCloudName}
                 cloudinaryUploadPreset={credentials.cloudinaryUploadPreset}
                 logger={logger}
+                addToast={addToast}
               />
             )}
             {view === View.SETS && (
@@ -156,6 +161,7 @@ const App: React.FC = () => {
                 apiToken={credentials.token} 
                 catalogId={credentials.catalogId} 
                 logger={logger}
+                addToast={addToast}
               />
             )}
              {view === View.LOGS && (

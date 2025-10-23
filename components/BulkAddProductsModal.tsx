@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { NewProduct, Product } from '../types';
+import { NewProduct, Product, ToastType } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
 import { uploadImage } from '../services/imageUploadService';
@@ -14,6 +14,7 @@ interface BulkAddProductsModalProps {
   cloudinaryCloudName: string;
   cloudinaryUploadPreset: string;
   logger?: Logger;
+  addToast: (message: string, type: ToastType) => void;
 }
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'RUB'];
@@ -31,7 +32,7 @@ const emptyProductRow: ProductRowState = {
   imageUploadState: 'idle' 
 };
 
-export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onClose, service, onProductsAdded, existingProducts, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
+export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onClose, service, onProductsAdded, existingProducts, cloudinaryCloudName, cloudinaryUploadPreset, logger, addToast }) => {
   const [productRows, setProductRows] = useState<ProductRowState[]>([{ ...emptyProductRow }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -66,7 +67,6 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     
     try {
         const imageUrl = await uploadImage(file, cloudinaryCloudName, cloudinaryUploadPreset, logger);
-        // Important: Read state again inside async function to avoid stale state
         setProductRows(currentRows => {
             const finalRows = [...currentRows];
             if (finalRows[index]) {
@@ -88,6 +88,28 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     }
   };
 
+  const applyImageToAll = (sourceIndex: number) => {
+    const sourceRow = productRows[sourceIndex];
+    if (sourceRow.imageUploadState !== 'success' || !sourceRow.imageUrl) {
+        return;
+    }
+
+    setProductRows(currentRows => 
+        currentRows.map((row, index) => {
+            if (index !== sourceIndex && row.imageUploadState === 'idle') {
+                return {
+                    ...row,
+                    imageUrl: sourceRow.imageUrl,
+                    localImagePreview: sourceRow.localImagePreview,
+                    fileName: sourceRow.fileName,
+                    imageUploadState: 'success'
+                };
+            }
+            return row;
+        })
+    );
+    addToast('Image applied to all empty rows.', ToastType.SUCCESS);
+  };
 
   const addProductRow = () => {
     setProductRows([...productRows, { ...emptyProductRow }]);
@@ -101,13 +123,11 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
 
   const duplicateProductRow = (index: number) => {
     const productToCopy: ProductRowState = { ...productRows[index] };
-    // Reset image state for the new row
     productToCopy.imageUploadState = 'idle';
     productToCopy.imageUrl = '';
     productToCopy.fileName = undefined;
     productToCopy.localImagePreview = undefined;
     productToCopy.imageUploadError = undefined;
-
     const newProducts = [...productRows];
     newProducts.splice(index + 1, 0, productToCopy);
     setProductRows(newProducts);
@@ -119,34 +139,25 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     
     const existingRetailerIds = new Set(existingProducts.map(p => p.retailer_id));
     const productsToSubmit: NewProduct[] = [];
-
     for (const p_row of productRows) {
         let newRetailerId = '';
         do {
             newRetailerId = Math.floor(100000 + Math.random() * 900000).toString();
         } while (existingRetailerIds.has(newRetailerId));
-        
-        existingRetailerIds.add(newRetailerId); // Ensure uniqueness within the batch
-
+        existingRetailerIds.add(newRetailerId);
         const { imageUploadState, imageUploadError, localImagePreview, fileName, ...productData } = p_row;
-        productsToSubmit.push({
-            ...productData,
-            retailer_id: newRetailerId,
-        });
+        productsToSubmit.push({ ...productData, retailer_id: newRetailerId });
     }
-
     const hasInvalidProducts = productsToSubmit.some(p => !p.name || !p.link || !p.imageUrl || p.price <= 0 || p.inventory < 0);
     if(hasInvalidProducts){
       setError("Name, Link, and Image are required. Price must be > 0 and Quantity must be >= 0.");
       return;
     }
-    
     const isUploading = productRows.some(p => p.imageUploadState === 'uploading');
     if(isUploading){
         setError("Please wait for all images to finish uploading.");
         return;
     }
-    
     setIsSubmitting(true);
     try {
       await service.addProducts(productsToSubmit);
@@ -161,7 +172,6 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
   };
   
   const isAnyImageUploading = productRows.some(p => p.imageUploadState === 'uploading');
-  
   const inputStyles = "block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700";
 
   return (
@@ -189,14 +199,12 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                         </svg>
                     </button>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input type="text" placeholder="Product Name" value={product.name} onChange={(e) => handleProductChange(index, 'name', e.target.value)} required className={inputStyles} />
                     <input type="text" placeholder="Brand" value={product.brand} onChange={(e) => handleProductChange(index, 'brand', e.target.value)} required className={inputStyles} />
                 </div>
                  <input type="url" placeholder="Product Link (URL)" value={product.link} onChange={(e) => handleProductChange(index, 'link', e.target.value)} required className={inputStyles} />
                 <textarea placeholder="Description" value={product.description} onChange={(e) => handleProductChange(index, 'description', e.target.value)} required className={inputStyles} rows={2}/>
-                
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                         <input type="number" step="0.01" min="0.01" placeholder="Price" value={product.price} onChange={(e) => handleProductChange(index, 'price', parseFloat(e.target.value) || 0)} required className={inputStyles} />
@@ -221,7 +229,10 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                         {product.imageUploadState === 'success' && product.localImagePreview && (
                             <div className="flex items-center gap-2 text-sm">
                                 <img src={product.localImagePreview} alt="preview" className="h-10 w-10 object-cover rounded"/>
-                                <span className="truncate text-green-600 dark:text-green-400">{product.fileName}</span>
+                                <div className="flex flex-col">
+                                    <span className="truncate text-green-600 dark:text-green-400">{product.fileName}</span>
+                                    <button type="button" onClick={() => applyImageToAll(index)} className="text-xs text-blue-500 hover:underline text-left">Apply to All</button>
+                                </div>
                             </div>
                         )}
                         {product.imageUploadState === 'error' && (

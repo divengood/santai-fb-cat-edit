@@ -1,13 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Product, ToastType } from '../types';
+import { Product, ToastType, ToastMessage } from '../types';
 import FacebookCatalogService from '../services/facebookService';
-import { useToast } from '../hooks/useToast';
 import { ProductList } from './ProductList';
 import { Spinner } from './Spinner';
 import { BulkAddProductsModal } from './BulkAddProductsModal';
 import { CreateSetModal } from './CreateSetModal';
-import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
 
 interface ProductManagerProps {
@@ -16,9 +14,10 @@ interface ProductManagerProps {
     cloudinaryCloudName: string;
     cloudinaryUploadPreset: string;
     logger: Logger;
+    addToast: (message: string, type: ToastType) => void;
 }
 
-export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalogId, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
+export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalogId, cloudinaryCloudName, cloudinaryUploadPreset, logger, addToast }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -26,8 +25,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isCreateSetModalOpen, setIsCreateSetModalOpen] = useState(false);
     
-    const { toasts, addToast, removeToast } = useToast();
-
     const service = useMemo(() => new FacebookCatalogService(apiToken, catalogId, logger), [apiToken, catalogId, logger]);
 
     const fetchProducts = useCallback(async () => {
@@ -66,7 +63,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                 })
             );
 
-            addToast('Product statuses refreshed.', ToastType.INFO);
+            addToast('Product statuses refreshed.', ToastType.SUCCESS);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             addToast(`Failed to refresh statuses: ${errorMessage}`, ToastType.ERROR);
@@ -80,7 +77,13 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
         const productIds = Array.from(selectedProducts);
         
         try {
-            await service.deleteProducts(productIds);
+            // In items_batch, we must use retailer_id to delete.
+            // Let's find the retailer_ids for the selected product_ids.
+            const retailerIdsToDelete = products
+                .filter(p => productIds.includes(p.id))
+                .map(p => p.retailer_id);
+
+            await service.deleteProducts(retailerIdsToDelete);
             setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
             setSelectedProducts(new Set());
             addToast(`${productIds.length} product(s) deleted successfully.`, ToastType.SUCCESS);
@@ -100,7 +103,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
 
     return (
         <div>
-            <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                  <h2 className="text-xl font-semibold">All Products ({products.length})</h2>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -152,6 +154,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
                     logger={logger}
+                    addToast={addToast}
                 />
             )}
 
