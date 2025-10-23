@@ -8,6 +8,7 @@ import { ToastContainer } from './ToastContainer';
 import { CreateSetModal } from './CreateSetModal';
 import { EditSetModal } from './EditSetModal';
 import { Logger } from '../services/loggingService';
+import { BulkEditSetsModal } from './BulkEditSetsModal';
 
 interface SetManagerProps {
     apiToken: string;
@@ -22,6 +23,8 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
     const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingSet, setEditingSet] = useState<ProductSet | null>(null);
+    const [nameFilter, setNameFilter] = useState('');
+    const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     
     const { toasts, addToast, removeToast } = useToast();
     const service = useMemo(() => new FacebookCatalogService(apiToken, catalogId, logger), [apiToken, catalogId, logger]);
@@ -46,6 +49,13 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
         fetchData();
     }, [fetchData]);
 
+    const filteredSets = useMemo(() => {
+        if (!nameFilter) {
+            return sets;
+        }
+        return sets.filter(set => set.name.toLowerCase().includes(nameFilter.toLowerCase()));
+    }, [sets, nameFilter]);
+
     const handleDeleteSelected = async () => {
         if (selectedSets.size === 0) return;
         const setIds = Array.from(selectedSets);
@@ -61,6 +71,10 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
         }
     };
     
+    const setsToEdit = useMemo(() => {
+        return sets.filter(s => selectedSets.has(s.id));
+    }, [sets, selectedSets]);
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -82,6 +96,13 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
                         Create Set
                     </button>
                     <button
+                        onClick={() => setIsBulkEditModalOpen(true)}
+                        disabled={selectedSets.size === 0}
+                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                        Edit Selected ({selectedSets.size})
+                    </button>
+                    <button
                         onClick={handleDeleteSelected}
                         disabled={selectedSets.size === 0}
                         className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -90,9 +111,19 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
                     </button>
                 </div>
             </div>
+
+            <div className="mb-4">
+                <input
+                    type="text"
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Filter by set name..."
+                    className="block w-full max-w-sm px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700"
+                />
+            </div>
             
             <SetList
-                sets={sets}
+                sets={filteredSets}
                 products={products}
                 selectedSets={selectedSets}
                 setSelectedSets={setSelectedSets}
@@ -121,6 +152,19 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
                     onSetUpdated={() => {
                         fetchData();
                         addToast(`Set "${editingSet.name}" updated successfully!`, ToastType.SUCCESS);
+                    }}
+                    logger={logger}
+                />
+            )}
+            {isBulkEditModalOpen && (
+                <BulkEditSetsModal
+                    onClose={() => setIsBulkEditModalOpen(false)}
+                    service={service}
+                    setsToEdit={setsToEdit}
+                    allProducts={products}
+                    onSetsUpdated={() => {
+                        fetchData();
+                        addToast(`${setsToEdit.length} set(s) updated successfully!`, ToastType.SUCCESS);
                     }}
                     logger={logger}
                 />
