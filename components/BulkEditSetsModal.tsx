@@ -13,53 +13,44 @@ interface BulkEditSetsModalProps {
   logger?: Logger;
 }
 
-const ProductListSection: React.FC<{ title: string; products: Product[]; selectedIds: Set<string>; onToggle: (id: string) => void; }> = ({ title, products, selectedIds, onToggle }) => {
-    const [nameFilter, setNameFilter] = useState('');
-    const [brandFilter, setBrandFilter] = useState('');
-
-    const filteredProducts = useMemo(() => {
-        return products.filter(product => {
-            const nameMatch = nameFilter ? product.name.toLowerCase().includes(nameFilter.toLowerCase()) : true;
-            const brandMatch = brandFilter ? product.brand.toLowerCase().includes(brandFilter.toLowerCase()) : true;
-            return nameMatch && brandMatch;
-        });
-    }, [products, nameFilter, brandFilter]);
-
-    const inputStyles = "block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600";
-
-    return (
-        <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{title} ({selectedIds.size})</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
-                <input type="text" placeholder="Filter by name..." value={nameFilter} onChange={e => setNameFilter(e.target.value)} className={inputStyles} />
-                <input type="text" placeholder="Filter by brand..." value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className={inputStyles} />
-            </div>
-            {products.length > 0 ? (
-                <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-40 overflow-y-auto">
-                    {filteredProducts.map(product => (
-                        <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                            <div className="w-0 flex-1 flex items-center">
-                                <input type="checkbox" id={`product-bulk-${product.id}`} checked={selectedIds.has(product.id)} onChange={() => onToggle(product.id)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600" />
-                                <label htmlFor={`product-bulk-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
-                                    <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
-                                    <span className="font-medium">{product.name}</span>
-                                </label>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            ) : <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">No products available.</p>}
-        </div>
-    );
-};
-
-
 export const BulkEditSetsModal: React.FC<BulkEditSetsModalProps> = ({ onClose, service, setsToEdit, allProducts, onSetsUpdated, logger }) => {
   const [productsToAdd, setProductsToAdd] = useState<Set<string>>(new Set());
   const [productsToRemove, setProductsToRemove] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
+  const [addNameFilter, setAddNameFilter] = useState('');
+  const [addBrandFilter, setAddBrandFilter] = useState('');
+  const [removeNameFilter, setRemoveNameFilter] = useState('');
+  const [removeBrandFilter, setRemoveBrandFilter] = useState('');
+
+  const { productsInSets, availableProducts } = useMemo(() => {
+    const allProductIdsInSelectedSets = new Set<string>();
+    setsToEdit.forEach(set => {
+      set.productIds.forEach(id => allProductIdsInSelectedSets.add(id));
+    });
+    
+    const productsInSets = allProducts.filter(p => allProductIdsInSelectedSets.has(p.id));
+    const availableProducts = allProducts.filter(p => !allProductIdsInSelectedSets.has(p.id));
+
+    return { productsInSets, availableProducts };
+  }, [setsToEdit, allProducts]);
+  
+  const filteredProductsToRemove = useMemo(() => {
+    return productsInSets.filter(p => 
+        (!removeNameFilter || p.name.toLowerCase().includes(removeNameFilter.toLowerCase())) &&
+        (!removeBrandFilter || p.brand.toLowerCase().includes(removeBrandFilter.toLowerCase()))
+    );
+  }, [productsInSets, removeNameFilter, removeBrandFilter]);
+
+  const filteredProductsToAdd = useMemo(() => {
+    return availableProducts.filter(p => 
+        (!addNameFilter || p.name.toLowerCase().includes(addNameFilter.toLowerCase())) &&
+        (!addBrandFilter || p.brand.toLowerCase().includes(addBrandFilter.toLowerCase()))
+    );
+  }, [availableProducts, addNameFilter, addBrandFilter]);
+
+
   const toggleProductToAdd = (productId: string) => {
     setProductsToAdd(prev => {
         const newSelection = new Set(prev);
@@ -110,6 +101,8 @@ export const BulkEditSetsModal: React.FC<BulkEditSetsModalProps> = ({ onClose, s
     }
   };
 
+  const inputStyles = "block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600";
+  
   return (
      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -121,23 +114,60 @@ export const BulkEditSetsModal: React.FC<BulkEditSetsModalProps> = ({ onClose, s
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
             <div className="p-6 flex-grow overflow-y-auto space-y-6">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Changes will be applied to all {setsToEdit.length} selected sets. Product name editing is disabled in bulk mode.
-                </p>
+                 <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Editing {setsToEdit.length} sets:</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {setsToEdit.map(s => <span key={s.id} className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">{s.name}</span>)}
+                    </div>
+                </div>
                 
-                <ProductListSection 
-                    title="Add these products"
-                    products={allProducts}
-                    selectedIds={productsToAdd}
-                    onToggle={toggleProductToAdd}
-                />
+                <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Products in Selected Sets ({productsInSets.length})</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Select products to remove from all selected sets.</p>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
+                        <input type="text" placeholder="Filter by name..." value={removeNameFilter} onChange={e => setRemoveNameFilter(e.target.value)} className={inputStyles} />
+                        <input type="text" placeholder="Filter by brand..." value={removeBrandFilter} onChange={e => setRemoveBrandFilter(e.target.value)} className={inputStyles} />
+                    </div>
+                    {productsInSets.length > 0 ? (
+                         <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-40 overflow-y-auto">
+                            {filteredProductsToRemove.map(product => (
+                                <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                    <div className="w-0 flex-1 flex items-center">
+                                        <input type="checkbox" id={`product-remove-${product.id}`} checked={productsToRemove.has(product.id)} onChange={() => toggleProductToRemove(product.id)} className="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600" />
+                                        <label htmlFor={`product-remove-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
+                                            <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
+                                            <span className="font-medium">{product.name}</span>
+                                        </label>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-xs text-center py-4 text-slate-500 dark:text-slate-400 mt-1">No products currently in the selected sets.</p>}
+                </div>
                 
-                 <ProductListSection 
-                    title="Remove these products (if they exist in the set)"
-                    products={allProducts}
-                    selectedIds={productsToRemove}
-                    onToggle={toggleProductToRemove}
-                />
+                <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Available Products to Add ({availableProducts.length})</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Select products to add to all selected sets.</p>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
+                        <input type="text" placeholder="Filter by name..." value={addNameFilter} onChange={e => setAddNameFilter(e.target.value)} className={inputStyles} />
+                        <input type="text" placeholder="Filter by brand..." value={addBrandFilter} onChange={e => setAddBrandFilter(e.target.value)} className={inputStyles} />
+                    </div>
+                     {availableProducts.length > 0 ? (
+                        <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-40 overflow-y-auto">
+                           {filteredProductsToAdd.map(product => (
+                                <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                    <div className="w-0 flex-1 flex items-center">
+                                        <input type="checkbox" id={`product-add-${product.id}`} checked={productsToAdd.has(product.id)} onChange={() => toggleProductToAdd(product.id)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600" />
+                                        <label htmlFor={`product-add-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
+                                            <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
+                                            <span className="font-medium">{product.name}</span>
+                                        </label>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                     ) : <p className="text-xs text-center py-4 text-slate-500 dark:text-slate-400 mt-1">All catalog products are already in the selected sets.</p>}
+                </div>
             </div>
              {error && <p className="text-sm text-red-500 text-center px-6 pb-4">{error}</p>}
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 border-t dark:border-slate-700 flex justify-end gap-3">
