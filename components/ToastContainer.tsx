@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { ToastMessage, ToastType } from '../types';
 import { Toast } from './Toast';
