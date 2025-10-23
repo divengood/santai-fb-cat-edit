@@ -71,7 +71,7 @@ class FacebookCatalogService {
 
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching products from catalog...");
-    const path = `/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory&limit=500`;
+    const path = `/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=500`;
     try {
         const response = await this.apiRequest(path);
         const products: Product[] = response.data.map((p: any) => ({
@@ -85,6 +85,8 @@ class FacebookCatalogService {
             currency: p.currency,
             imageUrl: p.image_url,
             inventory: p.inventory || 0,
+            reviewStatus: p.review_status || 'pending',
+            rejectionReasons: p.rejection_reasons || [],
         }));
         this.logger?.success(`Successfully fetched ${products.length} products.`);
         return products;

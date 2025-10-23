@@ -7,6 +7,24 @@ interface ProductListProps {
   setSelectedProducts: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
+const statusStyles = {
+    approved: {
+        dot: 'bg-green-500',
+        text: 'text-green-700 dark:text-green-400',
+        bg: 'bg-green-100 dark:bg-green-900/50',
+    },
+    pending: {
+        dot: 'bg-amber-500',
+        text: 'text-amber-700 dark:text-amber-400',
+        bg: 'bg-amber-100 dark:bg-amber-900/50',
+    },
+    rejected: {
+        dot: 'bg-red-500',
+        text: 'text-red-700 dark:text-red-400',
+        bg: 'bg-red-100 dark:bg-red-900/50',
+    }
+};
+
 export const ProductList: React.FC<ProductListProps> = ({ products, selectedProducts, setSelectedProducts }) => {
 
   const handleSelectProduct = (productId: string) => {
@@ -55,36 +73,55 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
             </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-6">
-            {products.map((product) => (
-            <div
-                key={product.id}
-                className={`bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 cursor-pointer ${selectedProducts.has(product.id) ? 'ring-2 ring-blue-500' : 'ring-1 ring-slate-200 dark:ring-slate-700'}`}
-                onClick={() => handleSelectProduct(product.id)}
-            >
-                <div className="relative">
-                    <div className="absolute top-3 left-3 z-10">
-                         <input
-                            type="checkbox"
-                            className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            checked={selectedProducts.has(product.id)}
-                            readOnly
-                        />
+            {products.map((product) => {
+                const productStatus = product.reviewStatus || 'pending';
+                const styles = statusStyles[productStatus];
+                const rejectionTitle = product.reviewStatus === 'rejected' && product.rejectionReasons && product.rejectionReasons.length > 0
+                    ? `Rejection Reasons:\n- ${product.rejectionReasons.join('\n- ')}`
+                    : '';
+                
+                return (
+                    <div
+                        key={product.id}
+                        className={`bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 cursor-pointer flex flex-col justify-between ${selectedProducts.has(product.id) ? 'ring-2 ring-blue-500' : 'ring-1 ring-slate-200 dark:ring-slate-700'}`}
+                        onClick={() => handleSelectProduct(product.id)}
+                    >
+                        <div>
+                            <div className="relative">
+                                <div className="absolute top-3 left-3 z-10">
+                                    <input
+                                        type="checkbox"
+                                        className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        checked={selectedProducts.has(product.id)}
+                                        readOnly
+                                    />
+                                </div>
+                                <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
+                                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                                </div>
+                            </div>
+                            <div className="p-4">
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{product.brand}</p>
+                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-semibold text-slate-900 dark:text-slate-100 hover:underline block truncate mt-1">{product.name}</a>
+                                <div className="flex justify-between items-center mt-3">
+                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
+                                </div>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">SKU: {product.retailer_id}</p>
+                            </div>
+                        </div>
+                        <div className="p-4 pt-0">
+                             <div
+                                className={`flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full w-fit ${styles.bg} ${styles.text}`}
+                                title={rejectionTitle}
+                            >
+                                <div className={`h-2 w-2 rounded-full ${styles.dot}`}></div>
+                                <span className="capitalize">{productStatus}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                    </div>
-                </div>
-                <div className="p-4">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{product.brand}</p>
-                    <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-semibold text-slate-900 dark:text-slate-100 hover:underline block truncate mt-1">{product.name}</a>
-                    <div className="flex justify-between items-center mt-3">
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
-                    </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">SKU: {product.retailer_id}</p>
-                </div>
-            </div>
-            ))}
+                )
+            })}
         </div>
     </div>
   );
