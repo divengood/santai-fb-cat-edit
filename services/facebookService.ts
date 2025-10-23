@@ -208,32 +208,23 @@ class FacebookCatalogService {
   
   async refreshProductsStatus(productIds: string[]): Promise<Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>> {
     if (productIds.length === 0) return new Map();
-    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s)...`);
-    
-    const cacheBuster = `&_=${Date.now()}`;
-    const requests: BatchRequest[] = productIds.map(id => ({
-        method: 'GET',
-        relative_url: `${id}?fields=review_status,rejection_reasons${cacheBuster}`,
-    }));
-    
+    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s) via individual requests...`);
+
     try {
-        const batchResponses = await this.batchRequest(requests);
+        const statusPromises = productIds.map(id => 
+            this.apiRequest(`/${id}?fields=review_status,rejection_reasons`)
+        );
+        
+        const results = await Promise.all(statusPromises);
         
         const statusMap = new Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>();
-
-        batchResponses.forEach((res: any, index: number) => {
-            if (res && res.code === 200) {
-                try {
-                    const body = JSON.parse(res.body);
-                    statusMap.set(body.id, {
-                        reviewStatus: body.review_status || 'pending',
-                        rejectionReasons: body.rejection_reasons || [],
-                    });
-                } catch (e) {
-                    this.logger?.warn(`Failed to parse status response for product ID ${productIds[index]}`);
-                }
-            } else {
-                this.logger?.warn(`Failed to fetch status for product ID ${productIds[index]}`);
+        
+        results.forEach((body) => {
+            if (body && body.id) {
+                statusMap.set(body.id, {
+                    reviewStatus: body.review_status || 'pending',
+                    rejectionReasons: body.rejection_reasons || [],
+                });
             }
         });
 
@@ -244,6 +235,7 @@ class FacebookCatalogService {
         throw error;
     }
   }
+
 
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
