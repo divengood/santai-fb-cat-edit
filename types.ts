@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   retailer_id: string;
