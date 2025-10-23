@@ -1,13 +1,10 @@
-
-import { LogEntry, LogLevel, ToastType } from '../types';
+import { LogEntry, LogLevel } from '../types';
 
 export class Logger {
   private setLogs: React.Dispatch<React.SetStateAction<LogEntry[]>>;
-  private addToast: (message: string, type: ToastType) => void;
 
-  constructor(setLogs: React.Dispatch<React.SetStateAction<LogEntry[]>>, addToast: (message: string, type: ToastType) => void) {
+  constructor(setLogs: React.Dispatch<React.SetStateAction<LogEntry[]>>) {
     this.setLogs = setLogs;
-    this.addToast = addToast;
   }
 
   private log(message: string, level: LogLevel) {
@@ -16,20 +13,17 @@ export class Logger {
       level,
       message,
     };
+
+    // Add the new log to the top of the array
     this.setLogs(prevLogs => [entry, ...prevLogs]);
 
     switch (level) {
       case LogLevel.ERROR:
         console.error(`[${level}] ${message}`);
-        this.addToast(message, ToastType.ERROR);
         break;
       case LogLevel.WARNING:
         console.warn(`[${level}] ${message}`);
         break;
-      case LogLevel.SUCCESS:
-         console.log(`[${level}] ${message}`);
-         this.addToast(message, ToastType.SUCCESS);
-         break;
       default:
         console.log(`[${level}] ${message}`);
     }

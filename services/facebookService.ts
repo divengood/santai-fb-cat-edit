@@ -8,8 +8,6 @@ interface BatchRequest {
     method: 'GET' | 'POST' | 'DELETE';
     relative_url: string;
     body?: string;
-    name?: string;
-    depends_on?: string;
 }
 
 class FacebookCatalogService {
@@ -28,17 +26,20 @@ class FacebookCatalogService {
 
   private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object) {
     const url = new URL(`${BASE_URL}${path}`);
-    const headers: HeadersInit = { 'Authorization': `Bearer ${this.apiToken}` };
-    const options: RequestInit = { method, headers };
+    url.searchParams.append('access_token', this.apiToken);
+
+    // Cache-busting for GET requests to ensure fresh data
+    if (method === 'GET') {
+      url.searchParams.append('_', Date.now().toString());
+    }
+
+    const options: RequestInit = {
+      method,
+    };
 
     if (method !== 'GET' && body) {
-        if (body instanceof URLSearchParams) {
-            headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            options.body = body;
-        } else {
-            headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(body);
-        }
+        options.headers = {'Content-Type': 'application/json'};
+        options.body = JSON.stringify(body);
     }
     
     const response = await fetch(url.toString(), options);
@@ -52,22 +53,17 @@ class FacebookCatalogService {
     return response.json();
   }
   
-   private async batchRequest(requests: BatchRequest[], isItemsBatch = false) {
-    const url = isItemsBatch
-        ? new URL(`${BASE_URL}/${this.catalogId}/items_batch`)
-        : new URL(BASE_URL);
-
-    const formData = new FormData();
-    formData.append('access_token', this.apiToken);
+   private async batchRequest(requests: BatchRequest[]) {
+    const url = new URL(BASE_URL);
+    url.searchParams.append('access_token', this.apiToken);
     
-    if (isItemsBatch) {
-        formData.append('item_type', 'PRODUCT_ITEM');
-        formData.append('requests', JSON.stringify(requests));
-    } else {
-        formData.append('batch', JSON.stringify(requests));
-    }
+    const formData = new FormData();
+    formData.append('batch', JSON.stringify(requests));
 
-    const response = await fetch(url.toString(), { method: 'POST', body: formData });
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      body: formData,
+    });
     
     if (!response.ok) {
         const errorData = await response.json();
@@ -78,32 +74,35 @@ class FacebookCatalogService {
     return response.json();
   }
 
-  private parseErrors(errors: any): string[] {
-      if (!errors || !errors.data || !Array.isArray(errors.data)) {
-          return [];
-      }
-      return errors.data.map((error: any) => error.error_message || error.description || 'No description provided.').filter(Boolean);
-  }
-
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,errors&limit=100`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=100&access_token=${this.apiToken}`;
 
     try {
-        const headers: HeadersInit = { 'Authorization': `Bearer ${this.apiToken}` };
-
         while (nextUrl) {
-            const urlToFetch = new URL(nextUrl);
-            urlToFetch.searchParams.append('_', Date.now().toString());
-            urlToFetch.searchParams.delete('access_token');
+            // Add cache buster to each paginated request
+            const urlToFetch = `${nextUrl}&_=${Date.now()}`;
+            const response = await fetch(urlToFetch);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Facebook API Error:', errorData);
+                throw new Error(errorData.error?.message || 'An unknown API error occurred while paginating.');
+            }
             
-            const response = await fetch(urlToFetch.toString(), { headers });
-            if (!response.ok) throw new Error((await response.json()).error?.message || 'Pagination error');
             const responseData = await response.json();
 
-            if (responseData.data) allProductsData = allProductsData.concat(responseData.data);
-            nextUrl = responseData.paging?.next || null;
+            if (responseData.data && responseData.data.length > 0) {
+                allProductsData = allProductsData.concat(responseData.data);
+            }
+
+            // Check for the next page link
+            if (responseData.paging && responseData.paging.next) {
+                nextUrl = responseData.paging.next;
+            } else {
+                nextUrl = null;
+            }
         }
         
         const products: Product[] = allProductsData.map((p: any) => ({
@@ -118,7 +117,7 @@ class FacebookCatalogService {
             imageUrl: p.image_url,
             inventory: p.inventory || 0,
             reviewStatus: p.review_status || 'pending',
-            rejectionReasons: this.parseErrors(p.errors),
+            rejectionReasons: p.rejection_reasons || [],
         }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
@@ -131,12 +130,11 @@ class FacebookCatalogService {
 
   async addProducts(newProducts: NewProduct[]): Promise<any> {
      if (newProducts.length === 0) return [];
-     this.logger?.info(`Attempting to add ${newProducts.length} product(s) via items_batch...`);
+     this.logger?.info(`Attempting to add ${newProducts.length} product(s)...`);
      
-     const requests = newProducts.map(p => ({
-        method: 'ADD', // Use 'ADD' for creating new items
-        retailer_id: p.retailer_id,
-        data: {
+     const requests: BatchRequest[] = newProducts.map(p => {
+        const params = new URLSearchParams({
+            retailer_id: p.retailer_id,
             name: p.name,
             description: p.description,
             brand: p.brand,
@@ -146,18 +144,31 @@ class FacebookCatalogService {
             image_url: p.imageUrl,
             availability: p.inventory > 0 ? 'in stock' : 'out of stock',
             inventory: String(p.inventory),
-            condition: 'new',
-        }
-     }));
+        });
+
+        return {
+            method: 'POST',
+            relative_url: `${this.catalogId}/products?${params.toString()}`,
+        };
+     });
      
      try {
-        const response = await this.batchRequest(requests as any, true);
-        if (response.handles) {
-            this.logger?.success(`Successfully submitted batch request to add ${newProducts.length} product(s).`);
-            return response;
-        } else {
-             throw new Error('items_batch did not return handles for tracking.');
+        const batchResponses = await this.batchRequest(requests);
+        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+
+        if (failedResponses.length > 0) {
+            let errorMessage = 'One or more products failed to be added.';
+            try {
+                const errorBody = JSON.parse(failedResponses[0].body);
+                if (errorBody.error && errorBody.error.message) {
+                    errorMessage = errorBody.error.message;
+                }
+            } catch (e) { /* Ignore parsing error */ }
+            throw new Error(errorMessage);
         }
+
+        this.logger?.success(`Successfully submitted batch request to add ${newProducts.length} product(s).`);
+        return batchResponses;
     } catch (error) {
         this.logger?.error("Failed to add products batch", error);
         throw error;
@@ -166,20 +177,29 @@ class FacebookCatalogService {
 
   async deleteProducts(productIds: string[]): Promise<any> {
     if (productIds.length === 0) return [];
-    this.logger?.info(`Attempting to delete ${productIds.length} product(s) via items_batch...`);
-    const requests = productIds.map(id => ({
+    this.logger?.info(`Attempting to delete ${productIds.length} product(s)...`);
+    const requests: BatchRequest[] = productIds.map(id => ({
         method: 'DELETE',
-        retailer_id: id, // For items_batch, we use retailer_id, assuming it's the product ID here.
+        relative_url: id,
     }));
     
     try {
-        const response = await this.batchRequest(requests as any, true);
-        if (response.handles) {
-            this.logger?.success(`Successfully submitted batch request to delete ${productIds.length} product(s).`);
-            return response;
-        } else {
-            throw new Error('items_batch did not return handles for tracking.');
+        const batchResponses = await this.batchRequest(requests);
+        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+        
+        if (failedResponses.length > 0) {
+            let errorMessage = 'One or more products failed to be deleted.';
+            try {
+                const errorBody = JSON.parse(failedResponses[0].body);
+                if (errorBody.error && errorBody.error.message) {
+                    errorMessage = errorBody.error.message;
+                }
+            } catch (e) { /* Ignore parsing error */ }
+            throw new Error(errorMessage);
         }
+        
+        this.logger?.success(`Successfully submitted batch request to delete ${productIds.length} product(s).`);
+        return batchResponses;
     } catch (error) {
         this.logger?.error("Failed to delete products batch", error);
         throw error;
@@ -188,22 +208,32 @@ class FacebookCatalogService {
   
   async refreshProductsStatus(productIds: string[]): Promise<Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>> {
     if (productIds.length === 0) return new Map();
-    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s) via individual requests...`);
-
+    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s)...`);
+    
+    const cacheBuster = `&_=${Date.now()}`;
+    const requests: BatchRequest[] = productIds.map(id => ({
+        method: 'GET',
+        relative_url: `${id}?fields=review_status,rejection_reasons${cacheBuster}`,
+    }));
+    
     try {
-        const promises = productIds.map(id => 
-            this.apiRequest(`/${id}?fields=review_status,errors,updated_time&_=${Date.now()}`)
-        );
+        const batchResponses = await this.batchRequest(requests);
         
-        const results = await Promise.all(promises);
         const statusMap = new Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>();
-        
-        results.forEach((body: any) => {
-            if (body && body.id) {
-                statusMap.set(body.id, {
-                    reviewStatus: body.review_status || 'pending',
-                    rejectionReasons: this.parseErrors(body.errors),
-                });
+
+        batchResponses.forEach((res: any, index: number) => {
+            if (res && res.code === 200) {
+                try {
+                    const body = JSON.parse(res.body);
+                    statusMap.set(body.id, {
+                        reviewStatus: body.review_status || 'pending',
+                        rejectionReasons: body.rejection_reasons || [],
+                    });
+                } catch (e) {
+                    this.logger?.warn(`Failed to parse status response for product ID ${productIds[index]}`);
+                }
+            } else {
+                this.logger?.warn(`Failed to fetch status for product ID ${productIds[index]}`);
             }
         });
 
@@ -217,32 +247,52 @@ class FacebookCatalogService {
 
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
+    const path = `/${this.catalogId}/product_sets?fields=id,name`;
     try {
-        const setsResponse = await this.apiRequest(`/${this.catalogId}/product_sets?fields=id,name`);
+        // Step 1: Fetch all sets with their IDs and names
+        const setsResponse = await this.apiRequest(path);
         const basicSets: {id: string, name: string}[] = setsResponse.data || [];
-        if (basicSets.length === 0) return [];
 
+        if (basicSets.length === 0) {
+            this.logger?.success("No product sets found in the catalog.");
+            return [];
+        }
+
+        // Step 2: Create a batch request to get products for each set
         const batchRequests: BatchRequest[] = basicSets.map(set => ({
             method: 'GET',
-            relative_url: `${set.id}/products?fields=id&limit=5000`
+            relative_url: `${set.id}/products?fields=id&limit=5000` // Fetch up to 5000 product IDs
         }));
 
         this.logger?.info(`Fetching products for ${basicSets.length} set(s)...`);
         const batchResponses = await this.batchRequest(batchRequests);
 
+        // Step 3: Combine the results
         const setsWithProducts: ProductSet[] = basicSets.map((set, index) => {
             const response = batchResponses[index];
             let productIds: string[] = [];
-            if (response?.code === 200) {
+            
+            if (response && response.code === 200) {
                 try {
                     const body = JSON.parse(response.body);
-                    if (body.data) productIds = body.data.map((p: any) => p.id);
-                } catch (e) { /* ignore parse error */ }
+                    if (body.data && Array.isArray(body.data)) {
+                        productIds = body.data.map((p: any) => p.id);
+                    }
+                } catch (e) {
+                    this.logger?.warn(`Failed to parse product list for set "${set.name}" (ID: ${set.id})`);
+                }
+            } else {
+                this.logger?.warn(`Failed to fetch products for set "${set.name}" (ID: ${set.id})`);
             }
-            return { id: set.id, name: set.name, productIds };
+
+            return {
+                id: set.id,
+                name: set.name,
+                productIds: productIds,
+            };
         });
         
-        this.logger?.success(`Successfully fetched ${setsWithProducts.length} product sets.`);
+        this.logger?.success(`Successfully fetched ${setsWithProducts.length} product sets and their contents.`);
         return setsWithProducts;
 
     } catch (error) {
@@ -251,13 +301,22 @@ class FacebookCatalogService {
     }
   }
 
+
   async createSet(name: string, productIds: string[]): Promise<ProductSet> {
-    this.logger?.info(`Creating new product set "${name}"...`);
+    this.logger?.info(`Creating new product set "${name}" with ${productIds.length} product(s)...`);
     try {
-        const payload = { name, filter: { product_item_id: { is_any: productIds } } };
+        const payload: { name: string; filter?: object } = { name };
+        if (productIds.length > 0) {
+            payload.filter = {
+                product_item_id: { is_any: productIds }
+            };
+        }
+
         const newSetResponse = await this.apiRequest(`/${this.catalogId}/product_sets`, 'POST', payload);
-        this.logger?.success(`Successfully created set "${name}".`);
-        return { id: newSetResponse.id, name, productIds };
+        const newSetId = newSetResponse.id;
+        
+        this.logger?.success(`Successfully created set "${name}" (ID: ${newSetId}).`);
+        return { id: newSetId, name, productIds };
     } catch(error) {
         this.logger?.error(`Failed to create set "${name}"`, error);
         throw error;
@@ -267,10 +326,27 @@ class FacebookCatalogService {
   async deleteSets(setIds: string[]): Promise<any> {
     if (setIds.length === 0) return [];
     this.logger?.info(`Attempting to delete ${setIds.length} set(s)...`);
-    const requests: BatchRequest[] = setIds.map(id => ({ method: 'DELETE', relative_url: id }));
+    const requests: BatchRequest[] = setIds.map(id => ({
+        method: 'DELETE',
+        relative_url: id,
+    }));
     try {
-        await this.batchRequest(requests);
+        const batchResponses = await this.batchRequest(requests);
+        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+
+        if (failedResponses.length > 0) {
+            let errorMessage = 'One or more sets failed to be deleted.';
+            try {
+                const errorBody = JSON.parse(failedResponses[0].body);
+                if (errorBody.error && errorBody.error.message) {
+                    errorMessage = errorBody.error.message;
+                }
+            } catch (e) { /* Ignore parsing error */ }
+            throw new Error(errorMessage);
+        }
+        
         this.logger?.success(`Successfully submitted batch request to delete ${setIds.length} set(s).`);
+        return batchResponses;
     } catch(error) {
         this.logger?.error("Failed to delete sets batch", error);
         throw error;
@@ -278,10 +354,19 @@ class FacebookCatalogService {
   }
   
   async updateSet(setId: string, name: string, productIds: string[]): Promise<ProductSet> {
-    this.logger?.info(`Updating set "${name}" (ID: ${setId})...`);
+    this.logger?.info(`Updating set "${name}" (ID: ${setId}) with ${productIds.length} products...`);
     try {
-        const payload = { name, filter: { product_item_id: { is_any: productIds } } };
+        const payload: { name: string; filter: object } = {
+            name,
+            // Use a filter that matches nothing if no products are selected,
+            // or a filter for the selected products.
+            filter: {
+                product_item_id: { is_any: productIds.length > 0 ? productIds : [] }
+            }
+        };
+
         await this.apiRequest(`/${setId}`, 'POST', payload);
+        
         this.logger?.success(`Successfully updated set "${name}".`);
         return { id: setId, name, productIds };
     } catch(error) {

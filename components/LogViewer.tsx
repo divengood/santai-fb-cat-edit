@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LogEntry, LogLevel } from '../types';
 

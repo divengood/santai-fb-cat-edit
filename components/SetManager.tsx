@@ -1,9 +1,10 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product, ProductSet, ToastType } from '../types';
 import FacebookCatalogService from '../services/facebookService';
+import { useToast } from '../hooks/useToast';
 import { SetList } from './SetList';
 import { Spinner } from './Spinner';
+import { ToastContainer } from './ToastContainer';
 import { CreateSetModal } from './CreateSetModal';
 import { EditSetModal } from './EditSetModal';
 import { Logger } from '../services/loggingService';
@@ -15,10 +16,9 @@ interface SetManagerProps {
     apiToken: string;
     catalogId: string;
     logger: Logger;
-    addToast: (message: string, type: ToastType) => void;
 }
 
-export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, logger, addToast }) => {
+export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, logger }) => {
     const [sets, setSets] = useState<ProductSet[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +29,7 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
     const [nameFilter, setNameFilter] = useState('');
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     
+    const { toasts, addToast, removeToast } = useToast();
     const service = useMemo(() => new FacebookCatalogService(apiToken, catalogId, logger), [apiToken, catalogId, logger]);
 
     const fetchData = useCallback(async () => {
@@ -87,6 +88,7 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
 
     return (
         <div>
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                  <h2 className="text-xl font-semibold">All Product Sets ({sets.length})</h2>
                 <div className="flex items-center gap-2 flex-wrap">
