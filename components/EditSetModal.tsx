@@ -15,22 +15,32 @@ interface EditSetModalProps {
 
 export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, set, allProducts, onSetUpdated }) => {
   const [setName, setSetName] = useState(set.name);
-  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set(set.productIds));
+  const [currentProductIds, setCurrentProductIds] = useState<Set<string>>(new Set(set.productIds));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
 
-  const filteredProducts = useMemo(() => {
+  const productsInSet = useMemo(() => {
+    const productMap = new Map(allProducts.map(p => [p.id, p]));
+    return Array.from(currentProductIds)
+      .map(id => productMap.get(id))
+      .filter((p): p is Product => p !== undefined);
+  }, [allProducts, currentProductIds]);
+  
+  const availableProducts = useMemo(() => {
     return allProducts.filter(product => {
-        const nameMatch = nameFilter ? product.name.toLowerCase().includes(nameFilter.toLowerCase()) : true;
-        const brandMatch = brandFilter ? product.brand.toLowerCase().includes(brandFilter.toLowerCase()) : true;
-        return nameMatch && brandMatch;
+      if (currentProductIds.has(product.id)) {
+        return false;
+      }
+      const nameMatch = nameFilter ? product.name.toLowerCase().includes(nameFilter.toLowerCase()) : true;
+      const brandMatch = brandFilter ? product.brand.toLowerCase().includes(brandFilter.toLowerCase()) : true;
+      return nameMatch && brandMatch;
     });
-  }, [allProducts, nameFilter, brandFilter]);
+  }, [allProducts, currentProductIds, nameFilter, brandFilter]);
 
-  const handleProductSelection = (productId: string) => {
-    setSelectedProductIds(prev => {
+  const toggleProductSelection = (productId: string) => {
+    setCurrentProductIds(prev => {
       const newSelection = new Set(prev);
       if (newSelection.has(productId)) {
         newSelection.delete(productId);
@@ -50,7 +60,7 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
     setError('');
     setIsSubmitting(true);
     try {
-      await service.updateSet(set.id, setName, Array.from(selectedProductIds));
+      await service.updateSet(set.id, setName, Array.from(currentProductIds));
       onSetUpdated();
       onClose();
     } catch (err) {
@@ -73,7 +83,7 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
             </button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
-            <div className="p-6 flex-grow overflow-y-auto space-y-4">
+            <div className="p-6 flex-grow overflow-y-auto space-y-6">
                 <div>
                     <label htmlFor="setName" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Set Name</label>
                     <input
@@ -85,31 +95,61 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
                         className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
                     />
                 </div>
-                 <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Manage Products in Set ({selectedProductIds.size})</p>
+                
+                <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Products in this Set ({productsInSet.length})</p>
+                    {productsInSet.length > 0 ? (
+                        <ul className="mt-2 border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-48 overflow-y-auto">
+                            {productsInSet.map(product => (
+                                <li key={product.id} className="pl-3 pr-4 py-2 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                    <div className="flex-1 w-0 truncate flex items-center gap-3">
+                                        <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover flex-shrink-0"/>
+                                        <span className="font-medium truncate">{product.name}</span>
+                                    </div>
+                                    <button type="button" onClick={() => toggleProductSelection(product.id)} className="ml-4 text-sm font-medium text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300">
+                                        Remove
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="mt-2 text-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md">
+                            <p className="text-sm text-slate-500">No products in this set.</p>
+                        </div>
+                    )}
+                </div>
+
+                <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Available Products to Add</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
                         <input type="text" placeholder="Filter by name..." value={nameFilter} onChange={e => setNameFilter(e.target.value)} className={inputStyles} />
                         <input type="text" placeholder="Filter by brand..." value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className={inputStyles} />
                     </div>
-                    <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-64 overflow-y-auto">
-                        {filteredProducts.map(product => (
-                            <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                <div className="w-0 flex-1 flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id={`product-${product.id}`}
-                                        checked={selectedProductIds.has(product.id)}
-                                        onChange={() => handleProductSelection(product.id)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600"
-                                    />
-                                    <label htmlFor={`product-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
-                                        <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
-                                        <span>{product.name}</span>
-                                    </label>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                    {availableProducts.length > 0 ? (
+                        <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-48 overflow-y-auto">
+                            {availableProducts.map(product => (
+                                <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                    <div className="w-0 flex-1 flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id={`product-add-${product.id}`}
+                                            checked={false} // This checkbox acts as an "Add" button
+                                            onChange={() => toggleProductSelection(product.id)}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                                        />
+                                        <label htmlFor={`product-add-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
+                                            <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
+                                            <span className="font-medium">{product.name}</span>
+                                        </label>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="mt-2 text-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md">
+                            <p className="text-sm text-slate-500">No other products to add.</p>
+                        </div>
+                    )}
                 </div>
             </div>
              {error && <p className="text-sm text-red-500 text-center px-6 pb-4">{error}</p>}
