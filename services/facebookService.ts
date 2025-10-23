@@ -225,30 +225,39 @@ class FacebookCatalogService {
   
   async refreshProductsStatus(productIds: string[]): Promise<Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>> {
     if (productIds.length === 0) return new Map();
-    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s) via individual requests...`);
+    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s) via batch request...`);
 
     try {
-        const statusPromises = productIds.map(id => 
-            this.apiRequest(`/${id}?fields=review_status,errors`)
-        );
+        const requests: BatchRequest[] = productIds.map(id => ({
+            method: 'GET',
+            relative_url: `${id}?fields=review_status,errors&_=${Date.now()}` // Cache-busting inside batch
+        }));
         
-        const results = await Promise.all(statusPromises);
-        
+        const batchResponses = await this.batchRequest(requests);
         const statusMap = new Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>();
         
-        results.forEach((body) => {
-            if (body && body.id) {
-                statusMap.set(body.id, {
-                    reviewStatus: body.review_status || 'pending',
-                    rejectionReasons: this.parseErrors(body.errors),
-                });
+        batchResponses.forEach((res: any) => {
+            if (res && res.code === 200) {
+                try {
+                    const body = JSON.parse(res.body);
+                    if (body && body.id) {
+                        statusMap.set(body.id, {
+                            reviewStatus: body.review_status || 'pending',
+                            rejectionReasons: this.parseErrors(body.errors),
+                        });
+                    }
+                } catch(e) {
+                    this.logger?.warn("Failed to parse a product status response in batch.");
+                }
+            } else {
+                 this.logger?.warn("A product status request failed within the batch.");
             }
         });
 
         this.logger?.success(`Successfully refreshed statuses for ${statusMap.size} product(s).`);
         return statusMap;
     } catch (error) {
-        this.logger?.error("Failed to refresh product statuses", error);
+        this.logger?.error("Failed to refresh product statuses via batch", error);
         throw error;
     }
   }
