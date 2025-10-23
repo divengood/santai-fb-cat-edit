@@ -25,56 +25,37 @@ class FacebookCatalogService {
     this.logger = logger;
   }
 
-  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object, isBatch: boolean = false) {
-    const url = new URL(isBatch ? `/${path}` : `${BASE_URL}${path}`);
-    
-    if(!isBatch) {
-      // Use Authorization header for non-batch requests
-      const headers: HeadersInit = {
-          'Authorization': `Bearer ${this.apiToken}`
-      };
-      
-      const options: RequestInit = {
-        method,
-        headers,
-      };
+  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object) {
+    const url = new URL(`${BASE_URL}${path}`);
 
-      if (method !== 'GET' && body) {
-          headers['Content-Type'] = 'application/json';
-          options.body = JSON.stringify(body);
-      }
-       
-      const response = await fetch(url.toString(), options);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Facebook API Error:', errorData);
-        throw new Error(errorData.error?.message || 'An unknown API error occurred.');
-      }
-      return response.json();
-
-    } else {
-        // Use FormData for batch requests
-        const formData = new FormData();
-        formData.append('access_token', this.apiToken);
-        if(body){
-            Object.entries(body).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
-        }
-
-        const response = await fetch(`${BASE_URL}${path}`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Facebook Batch API Error:', errorData);
-            throw new Error(errorData.error?.message || 'An unknown batch API error occurred.');
-        }
-        return response.json();
+    // Cache-busting for GET requests
+    if (method === 'GET') {
+      url.searchParams.append('_', Date.now().toString());
     }
+
+    const headers: HeadersInit = {
+        'Authorization': `Bearer ${this.apiToken}`
+    };
+
+    const options: RequestInit = {
+      method,
+      headers,
+    };
+
+    if (method !== 'GET' && body) {
+        headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+    }
+    
+    const response = await fetch(url.toString(), options);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Facebook API Error:', errorData);
+      throw new Error(errorData.error?.message || 'An unknown API error occurred.');
+    }
+
+    return response.json();
   }
   
    private async batchRequest(requests: BatchRequest[]) {
@@ -165,12 +146,12 @@ class FacebookCatalogService {
   }
 
   async addProducts(newProducts: NewProduct[]): Promise<any> {
-    if (newProducts.length === 0) return [];
-    this.logger?.info(`Attempting to add ${newProducts.length} product(s) via items_batch...`);
-
-    const requests = newProducts.map(p => ({
-        method: 'create',
-        data: {
+     if (newProducts.length === 0) return [];
+     this.logger?.info(`Attempting to add ${newProducts.length} product(s)...`);
+     
+     const requests: BatchRequest[] = newProducts.map(p => {
+        const params = new URLSearchParams({
+            retailer_id: p.retailer_id,
             name: p.name,
             description: p.description,
             brand: p.brand,
@@ -180,47 +161,64 @@ class FacebookCatalogService {
             image_url: p.imageUrl,
             availability: p.inventory > 0 ? 'in stock' : 'out of stock',
             inventory: String(p.inventory),
-            condition: 'new',
-            retailer_id: p.retailer_id,
-        }
-    }));
+        });
 
-    const body = {
-        allow_upsert: true,
-        item_type: 'PRODUCT_ITEM',
-        requests: JSON.stringify(requests),
-    };
-    
-    try {
-        const response = await this.apiRequest(`/${this.catalogId}/items_batch`, 'POST', body, true);
-        this.logger?.success(`Successfully submitted items_batch to add ${newProducts.length} product(s). Handle: ${response.handle}`);
-        return response;
+        return {
+            method: 'POST',
+            relative_url: `${this.catalogId}/products?${params.toString()}`,
+        };
+     });
+     
+     try {
+        const batchResponses = await this.batchRequest(requests);
+        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+
+        if (failedResponses.length > 0) {
+            let errorMessage = 'One or more products failed to be added.';
+            try {
+                const errorBody = JSON.parse(failedResponses[0].body);
+                if (errorBody.error && errorBody.error.message) {
+                    errorMessage = errorBody.error.message;
+                }
+            } catch (e) { /* Ignore parsing error */ }
+            throw new Error(errorMessage);
+        }
+
+        this.logger?.success(`Successfully submitted batch request to add ${newProducts.length} product(s).`);
+        return batchResponses;
     } catch (error) {
-        this.logger?.error("Failed to add products with items_batch", error);
+        this.logger?.error("Failed to add products batch", error);
         throw error;
     }
   }
 
   async deleteProducts(productIds: string[]): Promise<any> {
     if (productIds.length === 0) return [];
-    this.logger?.info(`Attempting to delete ${productIds.length} product(s) via items_batch...`);
-    
-    const requests = productIds.map(id => ({
-        method: 'delete',
-        data: { id: id }
+    this.logger?.info(`Attempting to delete ${productIds.length} product(s)...`);
+    const requests: BatchRequest[] = productIds.map(id => ({
+        method: 'DELETE',
+        relative_url: id,
     }));
-
-    const body = {
-        item_type: 'PRODUCT_ITEM',
-        requests: JSON.stringify(requests),
-    };
     
     try {
-        const response = await this.apiRequest(`/${this.catalogId}/items_batch`, 'POST', body, true);
-        this.logger?.success(`Successfully submitted items_batch to delete ${productIds.length} product(s). Handle: ${response.handle}`);
-        return response;
+        const batchResponses = await this.batchRequest(requests);
+        const failedResponses = batchResponses.filter((res: any) => res && res.code !== 200);
+        
+        if (failedResponses.length > 0) {
+            let errorMessage = 'One or more products failed to be deleted.';
+            try {
+                const errorBody = JSON.parse(failedResponses[0].body);
+                if (errorBody.error && errorBody.error.message) {
+                    errorMessage = errorBody.error.message;
+                }
+            } catch (e) { /* Ignore parsing error */ }
+            throw new Error(errorMessage);
+        }
+        
+        this.logger?.success(`Successfully submitted batch request to delete ${productIds.length} product(s).`);
+        return batchResponses;
     } catch (error) {
-        this.logger?.error("Failed to delete products with items_batch", error);
+        this.logger?.error("Failed to delete products batch", error);
         throw error;
     }
   }
