@@ -43,14 +43,30 @@ class FacebookCatalogService {
     }
     
     const response = await fetch(url.toString(), options);
+    const responseText = await response.text();
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Facebook API Error:', errorData);
-      throw new Error(errorData.error?.message || 'An unknown API error occurred.');
+    if (response.ok) {
+        try {
+            return responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            console.error("Failed to parse successful response JSON", responseText, e);
+            throw new Error("Received a malformed success response from the server.");
+        }
     }
 
-    return response.json();
+    // Handle error responses
+    let errorMessage = `Request failed with status ${response.status}`;
+    if (responseText) {
+        try {
+            const errorData = JSON.parse(responseText);
+            console.error('Facebook API Error:', errorData);
+            errorMessage = errorData.error?.message || responseText;
+        } catch (e) {
+            console.error('Facebook API non-JSON error:', responseText);
+            errorMessage = `Request failed with status ${response.status}: ${responseText}`;
+        }
+    }
+    throw new Error(errorMessage);
   }
   
    private async batchRequest(requests: BatchRequest[]) {
@@ -65,13 +81,30 @@ class FacebookCatalogService {
       body: formData,
     });
     
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Facebook Batch API Error:', errorData);
-        throw new Error(errorData.error?.message || 'An unknown batch API error occurred.');
+    const responseText = await response.text();
+
+    if (response.ok) {
+        try {
+            return responseText ? JSON.parse(responseText) : []; // Batch should return an array
+        } catch (e) {
+            console.error("Failed to parse successful batch response JSON", responseText, e);
+            throw new Error("Received a malformed success response from the server for a batch request.");
+        }
     }
     
-    return response.json();
+    let errorMessage = `Batch request failed with status ${response.status}`;
+    if (responseText) {
+        try {
+            const errorData = JSON.parse(responseText);
+            console.error('Facebook Batch API Error:', errorData);
+            errorMessage = errorData.error?.message || responseText;
+        } catch (e) {
+            console.error('Facebook Batch API non-JSON error:', responseText);
+            errorMessage = `Batch request failed with status ${response.status}: ${responseText}`;
+        }
+    }
+    
+    throw new Error(errorMessage);
   }
 
   async getProducts(): Promise<Product[]> {

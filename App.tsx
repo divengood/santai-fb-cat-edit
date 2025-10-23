@@ -135,7 +135,7 @@ const App: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
               >
-                Action Log
+                History
               </button>
             </nav>
           </div>

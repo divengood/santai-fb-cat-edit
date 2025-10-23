@@ -1,3 +1,5 @@
+// FIX: Import React to provide types for React.Dispatch and React.SetStateAction.
+import * as React from 'react';
 import { LogEntry, LogLevel } from '../types';
 
 export class Logger {
