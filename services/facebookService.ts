@@ -220,14 +220,22 @@ class FacebookCatalogService {
 
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
-    const path = `/${this.catalogId}/product_sets?fields=id,name,product_count,latest_product_items.limit(100){id}`;
+    // Request the 'filter' field instead of 'latest_product_items' for reliability
+    const path = `/${this.catalogId}/product_sets?fields=id,name,filter`;
     try {
         const response = await this.apiRequest(path);
-        const sets: ProductSet[] = response.data.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          productIds: s.latest_product_items?.data.map((p: any) => p.id) || [],
-        }));
+        const sets: ProductSet[] = response.data.map((s: any) => {
+            let productIds: string[] = [];
+            // Extract product IDs from the filter object
+            if (s.filter && s.filter.product_item_id && Array.isArray(s.filter.product_item_id.is_any)) {
+                productIds = s.filter.product_item_id.is_any;
+            }
+            return {
+              id: s.id,
+              name: s.name,
+              productIds: productIds,
+            };
+        });
         this.logger?.success(`Successfully fetched ${sets.length} product sets.`);
         return sets;
     } catch (error) {
