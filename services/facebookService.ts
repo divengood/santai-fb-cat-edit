@@ -1,4 +1,3 @@
-
 import { Product, ProductSet, NewProduct } from '../types';
 import { Logger } from './loggingService';
 
@@ -135,7 +134,7 @@ class FacebookCatalogService {
      this.logger?.info(`Attempting to add ${newProducts.length} product(s) via items_batch...`);
      
      const requests = newProducts.map(p => ({
-        method: 'UPDATE', // Using UPDATE as it works for creation too (upsert)
+        method: 'ADD', // Use 'ADD' for creating new items
         retailer_id: p.retailer_id,
         data: {
             name: p.name,
