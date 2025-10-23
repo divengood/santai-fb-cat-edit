@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NewProduct, Product } from '../types';
+import { NewProduct, Product, ToastType } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
 import { uploadImage } from '../services/imageUploadService';
@@ -13,6 +13,7 @@ interface BulkAddProductsModalProps {
   cloudinaryCloudName: string;
   cloudinaryUploadPreset: string;
   logger?: Logger;
+  addToast: (message: string, type: ToastType) => void;
 }
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'RUB'];
@@ -30,7 +31,7 @@ const emptyProductRow: ProductRowState = {
   imageUploadState: 'idle' 
 };
 
-export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onClose, service, onProductsAdded, existingProducts, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
+export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onClose, service, onProductsAdded, existingProducts, cloudinaryCloudName, cloudinaryUploadPreset, logger, addToast }) => {
   const [productRows, setProductRows] = useState<ProductRowState[]>([{ ...emptyProductRow }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -110,6 +111,25 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     const newProducts = [...productRows];
     newProducts.splice(index + 1, 0, productToCopy);
     setProductRows(newProducts);
+  };
+
+  const handleApplyImageToAll = (imageUrl: string, localPreview: string, fileName: string) => {
+    setProductRows(currentRows => {
+        return currentRows.map(row => {
+            if (row.imageUploadState === 'idle' || row.imageUploadState === 'error') {
+                return {
+                    ...row,
+                    imageUrl,
+                    localImagePreview: localPreview,
+                    fileName,
+                    imageUploadState: 'success',
+                    imageUploadError: undefined,
+                };
+            }
+            return row;
+        });
+    });
+    addToast("Image applied to all empty rows.", ToastType.INFO);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,7 +240,10 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                         {product.imageUploadState === 'success' && product.localImagePreview && (
                             <div className="flex items-center gap-2 text-sm">
                                 <img src={product.localImagePreview} alt="preview" className="h-10 w-10 object-cover rounded"/>
-                                <span className="truncate text-green-600 dark:text-green-400">{product.fileName}</span>
+                                <div className="truncate">
+                                     <span className="truncate text-green-600 dark:text-green-400 block">{product.fileName}</span>
+                                     <button type="button" onClick={() => handleApplyImageToAll(product.imageUrl, product.localImagePreview!, product.fileName!)} className="text-xs text-blue-500 hover:underline">Apply to All</button>
+                                </div>
                             </div>
                         )}
                         {product.imageUploadState === 'error' && (

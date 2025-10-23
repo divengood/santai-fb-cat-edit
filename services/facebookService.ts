@@ -55,9 +55,9 @@ class FacebookCatalogService {
   
    private async batchRequest(requests: BatchRequest[]) {
     const url = new URL(BASE_URL);
-    url.searchParams.append('access_token', this.apiToken);
     
     const formData = new FormData();
+    formData.append('access_token', this.apiToken);
     formData.append('batch', JSON.stringify(requests));
 
     const response = await fetch(url.toString(), {
@@ -77,13 +77,16 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=100`;
 
     try {
         while (nextUrl) {
-            // Add cache buster to each paginated request
-            const urlToFetch = `${nextUrl}&_=${Date.now()}`;
-            const response = await fetch(urlToFetch);
+            // Add cache buster and token to each paginated request
+            const urlToFetch = new URL(nextUrl);
+            urlToFetch.searchParams.append('access_token', this.apiToken);
+            urlToFetch.searchParams.append('_', Date.now().toString());
+            
+            const response = await fetch(urlToFetch.toString());
 
             if (!response.ok) {
                 const errorData = await response.json();
