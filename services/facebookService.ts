@@ -75,11 +75,37 @@ class FacebookCatalogService {
   }
 
   async getProducts(): Promise<Product[]> {
-    this.logger?.info("Fetching products from catalog...");
-    const path = `/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=500`;
+    this.logger?.info("Fetching all products from catalog (with pagination)...");
+    let allProductsData: any[] = [];
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=100&access_token=${this.apiToken}`;
+
     try {
-        const response = await this.apiRequest(path);
-        const products: Product[] = response.data.map((p: any) => ({
+        while (nextUrl) {
+            // Add cache buster to each paginated request
+            const urlToFetch = `${nextUrl}&_=${Date.now()}`;
+            const response = await fetch(urlToFetch);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Facebook API Error:', errorData);
+                throw new Error(errorData.error?.message || 'An unknown API error occurred while paginating.');
+            }
+            
+            const responseData = await response.json();
+
+            if (responseData.data && responseData.data.length > 0) {
+                allProductsData = allProductsData.concat(responseData.data);
+            }
+
+            // Check for the next page link
+            if (responseData.paging && responseData.paging.next) {
+                nextUrl = responseData.paging.next;
+            } else {
+                nextUrl = null;
+            }
+        }
+        
+        const products: Product[] = allProductsData.map((p: any) => ({
             id: p.id,
             retailer_id: p.retailer_id,
             name: p.name,
@@ -93,9 +119,10 @@ class FacebookCatalogService {
             reviewStatus: p.review_status || 'pending',
             rejectionReasons: p.rejection_reasons || [],
         }));
-        this.logger?.success(`Successfully fetched ${products.length} products.`);
+        
+        this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
         return products;
-    } catch(error) {
+    } catch (error) {
         this.logger?.error("Failed to fetch products", error);
         throw error;
     }
@@ -220,29 +247,60 @@ class FacebookCatalogService {
 
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
-    // Request the 'filter' field instead of 'latest_product_items' for reliability
-    const path = `/${this.catalogId}/product_sets?fields=id,name,filter`;
+    const path = `/${this.catalogId}/product_sets?fields=id,name`;
     try {
-        const response = await this.apiRequest(path);
-        const sets: ProductSet[] = response.data.map((s: any) => {
+        // Step 1: Fetch all sets with their IDs and names
+        const setsResponse = await this.apiRequest(path);
+        const basicSets: {id: string, name: string}[] = setsResponse.data || [];
+
+        if (basicSets.length === 0) {
+            this.logger?.success("No product sets found in the catalog.");
+            return [];
+        }
+
+        // Step 2: Create a batch request to get products for each set
+        const batchRequests: BatchRequest[] = basicSets.map(set => ({
+            method: 'GET',
+            relative_url: `${set.id}/products?fields=id&limit=5000` // Fetch up to 5000 product IDs
+        }));
+
+        this.logger?.info(`Fetching products for ${basicSets.length} set(s)...`);
+        const batchResponses = await this.batchRequest(batchRequests);
+
+        // Step 3: Combine the results
+        const setsWithProducts: ProductSet[] = basicSets.map((set, index) => {
+            const response = batchResponses[index];
             let productIds: string[] = [];
-            // Extract product IDs from the filter object
-            if (s.filter && s.filter.product_item_id && Array.isArray(s.filter.product_item_id.is_any)) {
-                productIds = s.filter.product_item_id.is_any;
+            
+            if (response && response.code === 200) {
+                try {
+                    const body = JSON.parse(response.body);
+                    if (body.data && Array.isArray(body.data)) {
+                        productIds = body.data.map((p: any) => p.id);
+                    }
+                } catch (e) {
+                    this.logger?.warn(`Failed to parse product list for set "${set.name}" (ID: ${set.id})`);
+                }
+            } else {
+                this.logger?.warn(`Failed to fetch products for set "${set.name}" (ID: ${set.id})`);
             }
+
             return {
-              id: s.id,
-              name: s.name,
-              productIds: productIds,
+                id: set.id,
+                name: set.name,
+                productIds: productIds,
             };
         });
-        this.logger?.success(`Successfully fetched ${sets.length} product sets.`);
-        return sets;
+        
+        this.logger?.success(`Successfully fetched ${setsWithProducts.length} product sets and their contents.`);
+        return setsWithProducts;
+
     } catch (error) {
         this.logger?.error("Failed to fetch product sets", error);
         throw error;
     }
   }
+
 
   async createSet(name: string, productIds: string[]): Promise<ProductSet> {
     this.logger?.info(`Creating new product set "${name}" with ${productIds.length} product(s)...`);
