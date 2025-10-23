@@ -1,3 +1,4 @@
+
 import { Product, ProductSet, NewProduct } from '../types';
 import { Logger } from './loggingService';
 
@@ -26,19 +27,23 @@ class FacebookCatalogService {
 
   private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object) {
     const url = new URL(`${BASE_URL}${path}`);
-    url.searchParams.append('access_token', this.apiToken);
 
-    // Cache-busting for GET requests to ensure fresh data
+    // Cache-busting for GET requests
     if (method === 'GET') {
       url.searchParams.append('_', Date.now().toString());
     }
 
+    const headers: HeadersInit = {
+        'Authorization': `Bearer ${this.apiToken}`
+    };
+
     const options: RequestInit = {
       method,
+      headers,
     };
 
     if (method !== 'GET' && body) {
-        options.headers = {'Content-Type': 'application/json'};
+        headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
     }
     
@@ -55,9 +60,9 @@ class FacebookCatalogService {
   
    private async batchRequest(requests: BatchRequest[]) {
     const url = new URL(BASE_URL);
-    url.searchParams.append('access_token', this.apiToken);
     
     const formData = new FormData();
+    formData.append('access_token', this.apiToken);
     formData.append('batch', JSON.stringify(requests));
 
     const response = await fetch(url.toString(), {
@@ -84,13 +89,19 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,errors&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,errors&limit=100`;
 
     try {
+        const headers: HeadersInit = {
+            'Authorization': `Bearer ${this.apiToken}`
+        };
+
         while (nextUrl) {
-            // Add cache buster to each paginated request
-            const urlToFetch = `${nextUrl}&_=${Date.now()}`;
-            const response = await fetch(urlToFetch);
+            const urlToFetch = new URL(nextUrl);
+            urlToFetch.searchParams.append('_', Date.now().toString());
+            urlToFetch.searchParams.delete('access_token');
+            
+            const response = await fetch(urlToFetch.toString(), { headers });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -104,7 +115,6 @@ class FacebookCatalogService {
                 allProductsData = allProductsData.concat(responseData.data);
             }
 
-            // Check for the next page link
             if (responseData.paging && responseData.paging.next) {
                 nextUrl = responseData.paging.next;
             } else {
