@@ -1,4 +1,3 @@
-
 import { LogEntry, LogLevel } from '../types';
 
 export class Logger {

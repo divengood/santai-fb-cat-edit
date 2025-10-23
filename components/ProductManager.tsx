@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product, ToastType } from '../types';
 import FacebookCatalogService from '../services/facebookService';
@@ -120,21 +119,20 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     </button>
                     <button
                         onClick={() => setIsCreateSetModalOpen(true)}
-                        disabled={selectedProducts.size === 0}
                         className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
-                        Create Set from Selected ({selectedProducts.size})
+                        Create Set ({selectedProducts.size})
                     </button>
-                     <button
+                    <button
                         onClick={handleDeleteSelected}
                         disabled={selectedProducts.size === 0}
-                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                         className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
                         Delete Selected ({selectedProducts.size})
                     </button>
                 </div>
             </div>
-
+            
             <ProductList
                 products={products}
                 selectedProducts={selectedProducts}
@@ -147,16 +145,15 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     service={service}
                     onProductsAdded={() => {
                         fetchProducts();
-                        addToast('Products added successfully! It may take a moment for them to appear.', ToastType.SUCCESS);
+                        addToast('Products added successfully!', ToastType.SUCCESS);
                     }}
                     existingProducts={products}
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
                     logger={logger}
-                    // FIX: Pass the `addToast` function to `BulkAddProductsModal` as it is a required prop.
-                    addToast={addToast}
                 />
             )}
+
             {isCreateSetModalOpen && (
                 <CreateSetModal
                     onClose={() => setIsCreateSetModalOpen(false)}
@@ -164,8 +161,8 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     allProducts={products}
                     initiallySelectedProductIds={Array.from(selectedProducts)}
                     onSetCreated={() => {
+                        setSelectedProducts(new Set());
                         addToast('Product set created successfully!', ToastType.SUCCESS);
-                        // No need to refetch sets as this is managed in SetManager
                     }}
                     logger={logger}
                 />

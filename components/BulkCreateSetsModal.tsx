@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
