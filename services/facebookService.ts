@@ -1,4 +1,3 @@
-
 import { Product, ProductSet, NewProduct } from '../types';
 import { Logger } from './loggingService';
 
@@ -75,17 +74,17 @@ class FacebookCatalogService {
     return response.json();
   }
 
-  private parseRejectionReasons(commerce_rejection_reasons: any): string[] {
-      if (!commerce_rejection_reasons || !commerce_rejection_reasons.data) {
+  private parseErrors(errors: any): string[] {
+      if (!errors || !errors.data || !Array.isArray(errors.data)) {
           return [];
       }
-      return commerce_rejection_reasons.data.map((reason: any) => reason.description);
+      return errors.data.map((error: any) => error.description || 'No description provided.').filter(Boolean);
   }
 
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,commerce_rejection_reasons&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,errors&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
@@ -125,7 +124,7 @@ class FacebookCatalogService {
             imageUrl: p.image_url,
             inventory: p.inventory || 0,
             reviewStatus: p.review_status || 'pending',
-            rejectionReasons: this.parseRejectionReasons(p.commerce_rejection_reasons),
+            rejectionReasons: this.parseErrors(p.errors),
         }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
@@ -220,7 +219,7 @@ class FacebookCatalogService {
 
     try {
         const statusPromises = productIds.map(id => 
-            this.apiRequest(`/${id}?fields=review_status,commerce_rejection_reasons`)
+            this.apiRequest(`/${id}?fields=review_status,errors`)
         );
         
         const results = await Promise.all(statusPromises);
@@ -231,7 +230,7 @@ class FacebookCatalogService {
             if (body && body.id) {
                 statusMap.set(body.id, {
                     reviewStatus: body.review_status || 'pending',
-                    rejectionReasons: this.parseRejectionReasons(body.commerce_rejection_reasons),
+                    rejectionReasons: this.parseErrors(body.errors),
                 });
             }
         });
