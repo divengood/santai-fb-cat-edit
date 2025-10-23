@@ -97,10 +97,9 @@ class FacebookCatalogService {
   async addProducts(newProducts: NewProduct[]): Promise<any> {
      if (newProducts.length === 0) return [];
      this.logger?.info(`Attempting to add ${newProducts.length} product(s)...`);
-     const requests: BatchRequest[] = newProducts.map(p => ({
-        method: 'POST',
-        relative_url: `${this.catalogId}/products`,
-        body: new URLSearchParams({
+     
+     const requests: BatchRequest[] = newProducts.map(p => {
+        const params = new URLSearchParams({
             retailer_id: p.retailer_id,
             name: p.name,
             description: p.description,
@@ -111,8 +110,13 @@ class FacebookCatalogService {
             image_url: p.imageUrl,
             availability: p.inventory > 0 ? 'in stock' : 'out of stock',
             inventory: String(p.inventory),
-        }).toString(),
-     }));
+        });
+
+        return {
+            method: 'POST',
+            relative_url: `${this.catalogId}/products?${params.toString()}`,
+        };
+     });
      
      try {
         const batchResponses = await this.batchRequest(requests);
