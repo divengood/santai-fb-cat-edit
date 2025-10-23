@@ -9,6 +9,8 @@ import { CreateSetModal } from './CreateSetModal';
 import { EditSetModal } from './EditSetModal';
 import { Logger } from '../services/loggingService';
 import { BulkEditSetsModal } from './BulkEditSetsModal';
+import { BulkCreateSetsModal } from './BulkCreateSetsModal';
+
 
 interface SetManagerProps {
     apiToken: string;
@@ -22,6 +24,7 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
     const [loading, setLoading] = useState(true);
     const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isBulkCreateModalOpen, setIsBulkCreateModalOpen] = useState(false);
     const [editingSet, setEditingSet] = useState<ProductSet | null>(null);
     const [nameFilter, setNameFilter] = useState('');
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
@@ -91,9 +94,15 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
                 <div className="flex items-center gap-2 flex-wrap">
                      <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
                         Create Set
+                    </button>
+                    <button
+                        onClick={() => setIsBulkCreateModalOpen(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                        Bulk Create Sets
                     </button>
                     <button
                         onClick={() => setIsBulkEditModalOpen(true)}
@@ -139,6 +148,18 @@ export const SetManager: React.FC<SetManagerProps> = ({ apiToken, catalogId, log
                     onSetCreated={() => {
                         fetchData();
                         addToast('Product set created successfully!', ToastType.SUCCESS);
+                    }}
+                    logger={logger}
+                />
+            )}
+             {isBulkCreateModalOpen && (
+                <BulkCreateSetsModal
+                    onClose={() => setIsBulkCreateModalOpen(false)}
+                    service={service}
+                    allProducts={products}
+                    onSetsCreated={(count) => {
+                        fetchData();
+                        addToast(`${count} product set(s) created successfully!`, ToastType.SUCCESS);
                     }}
                     logger={logger}
                 />
