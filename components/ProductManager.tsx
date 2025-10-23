@@ -29,34 +29,50 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
 
     const service = useMemo(() => new FacebookCatalogService(apiToken, catalogId, logger), [apiToken, catalogId, logger]);
 
-    const fetchProducts = useCallback(async (isRefresh = false) => {
-        if (isRefresh) {
-            setIsRefreshing(true);
-        } else {
-            setLoading(true);
-        }
+    const fetchProducts = useCallback(async () => {
+        setLoading(true);
         setSelectedProducts(new Set());
         try {
             const fetchedProducts = await service.getProducts();
             setProducts(fetchedProducts);
-            if (isRefresh) {
-                addToast('Product statuses refreshed.', ToastType.INFO);
-            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             addToast(`Failed to fetch products: ${errorMessage}`, ToastType.ERROR);
         } finally {
-            if (isRefresh) {
-                setIsRefreshing(false);
-            } else {
-                setLoading(false);
-            }
+            setLoading(false);
         }
     }, [service, addToast]);
 
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    const handleRefreshStatus = useCallback(async () => {
+        const productIdsToRefresh = products.map(p => p.id);
+        if (productIdsToRefresh.length === 0) {
+            addToast('No products to refresh.', ToastType.INFO);
+            return;
+        }
+
+        setIsRefreshing(true);
+        try {
+            const statusMap = await service.refreshProductsStatus(productIdsToRefresh);
+            
+            setProducts(currentProducts =>
+                currentProducts.map(p => {
+                    const newStatus = statusMap.get(p.id);
+                    return newStatus ? { ...p, ...newStatus } : p;
+                })
+            );
+
+            addToast('Product statuses refreshed.', ToastType.INFO);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            addToast(`Failed to refresh statuses: ${errorMessage}`, ToastType.ERROR);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [service, products, addToast]);
 
     const handleDeleteSelected = async () => {
         if (selectedProducts.size === 0) return;
@@ -88,7 +104,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                  <h2 className="text-xl font-semibold">All Products ({products.length})</h2>
                 <div className="flex items-center gap-2 flex-wrap">
                      <button
-                        onClick={() => fetchProducts(true)}
+                        onClick={handleRefreshStatus}
                         disabled={isRefreshing}
                         className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
