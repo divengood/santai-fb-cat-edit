@@ -428,14 +428,13 @@ class FacebookCatalogService {
         product_item_id: { is_any: set.productIds }
       };
       
-      const bodyParams = new URLSearchParams();
-      bodyParams.append('name', set.name);
-      bodyParams.append('filter', JSON.stringify(filter));
+      const params = new URLSearchParams();
+      params.append('name', set.name);
+      params.append('filter', JSON.stringify(filter));
 
       return {
         method: 'POST',
-        relative_url: `${this.catalogId}/product_sets`,
-        body: bodyParams.toString()
+        relative_url: `${this.catalogId}/product_sets?${params.toString()}`,
       };
     });
 
