@@ -129,7 +129,7 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,review_status,rejection_reasons&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
@@ -172,8 +172,6 @@ class FacebookCatalogService {
             currency: p.currency,
             imageUrl: p.image_url,
             inventory: p.inventory || 0,
-            reviewStatus: p.review_status || 'pending',
-            rejectionReasons: p.rejection_reasons || [],
         }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
@@ -298,45 +296,6 @@ class FacebookCatalogService {
         return batchResponses;
     } catch (error) {
         this.logger?.error("Failed to delete products batch", error);
-        throw error;
-    }
-  }
-  
-  async refreshProductsStatus(productIds: string[]): Promise<Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>> {
-    if (productIds.length === 0) return new Map();
-    this.logger?.info(`Refreshing statuses for ${productIds.length} product(s)...`);
-    
-    const cacheBuster = `&_=${Date.now()}`;
-    const requests: BatchRequest[] = productIds.map(id => ({
-        method: 'GET',
-        relative_url: `${id}?fields=review_status,rejection_reasons${cacheBuster}`,
-    }));
-    
-    try {
-        const batchResponses = await this.batchRequest(requests);
-        
-        const statusMap = new Map<string, { reviewStatus: 'approved' | 'pending' | 'rejected'; rejectionReasons?: string[] }>();
-
-        batchResponses.forEach((res: any, index: number) => {
-            if (res && res.code === 200) {
-                try {
-                    const body = JSON.parse(res.body);
-                    statusMap.set(body.id, {
-                        reviewStatus: body.review_status || 'pending',
-                        rejectionReasons: body.rejection_reasons || [],
-                    });
-                } catch (e) {
-                    this.logger?.warn(`Failed to parse status response for product ID ${productIds[index]}`);
-                }
-            } else {
-                this.logger?.warn(`Failed to fetch status for product ID ${productIds[index]}`);
-            }
-        });
-
-        this.logger?.success(`Successfully refreshed statuses for ${statusMap.size} product(s).`);
-        return statusMap;
-    } catch (error) {
-        this.logger?.error("Failed to refresh product statuses", error);
         throw error;
     }
   }

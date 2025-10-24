@@ -7,24 +7,6 @@ interface ProductListProps {
   setSelectedProducts: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-const statusStyles = {
-    approved: {
-        dot: 'bg-green-500',
-        text: 'text-green-700 dark:text-green-400',
-        bg: 'bg-green-100 dark:bg-green-900/50',
-    },
-    pending: {
-        dot: 'bg-amber-500',
-        text: 'text-amber-700 dark:text-amber-400',
-        bg: 'bg-amber-100 dark:bg-amber-900/50',
-    },
-    rejected: {
-        dot: 'bg-red-500',
-        text: 'text-red-700 dark:text-red-400',
-        bg: 'bg-red-100 dark:bg-red-900/50',
-    }
-};
-
 export const ProductList: React.FC<ProductListProps> = ({ products, selectedProducts, setSelectedProducts }) => {
 
   const handleSelectProduct = (productId: string) => {
@@ -74,12 +56,6 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-6">
             {products.map((product) => {
-                const productStatus = product.reviewStatus || 'pending';
-                const styles = statusStyles[productStatus];
-                const rejectionTitle = product.reviewStatus === 'rejected' && product.rejectionReasons && product.rejectionReasons.length > 0
-                    ? `Rejection Reasons:\n- ${product.rejectionReasons.join('\n- ')}`
-                    : '';
-                
                 return (
                     <div
                         key={product.id}
@@ -108,15 +84,6 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                                     <p className="text-sm text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
                                 </div>
                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">SKU: {product.retailer_id}</p>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-0">
-                             <div
-                                className={`flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full w-fit ${styles.bg} ${styles.text}`}
-                                title={rejectionTitle}
-                            >
-                                <div className={`h-2 w-2 rounded-full ${styles.dot}`}></div>
-                                <span className="capitalize">{productStatus}</span>
                             </div>
                         </div>
                     </div>

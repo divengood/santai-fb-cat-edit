@@ -19,7 +19,6 @@ interface ProductManagerProps {
 export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalogId, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isCreatingSets, setIsCreatingSets] = useState(false);
@@ -45,33 +44,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
-
-    const handleRefreshStatus = useCallback(async () => {
-        const productIdsToRefresh = products.map(p => p.id);
-        if (productIdsToRefresh.length === 0) {
-            addToast('No products to refresh.', ToastType.INFO);
-            return;
-        }
-
-        setIsRefreshing(true);
-        try {
-            const statusMap = await service.refreshProductsStatus(productIdsToRefresh);
-            
-            setProducts(currentProducts =>
-                currentProducts.map(p => {
-                    const newStatus = statusMap.get(p.id);
-                    return newStatus ? { ...p, ...newStatus } : p;
-                })
-            );
-
-            addToast('Product statuses refreshed.', ToastType.INFO);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            addToast(`Failed to refresh statuses: ${errorMessage}`, ToastType.ERROR);
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, [service, products, addToast]);
 
     const handleDeleteSelected = async () => {
         if (selectedProducts.size === 0) return;
@@ -155,14 +127,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                  <h2 className="text-xl font-semibold">All Products ({products.length})</h2>
                 <div className="flex items-center gap-2 flex-wrap">
-                     <button
-                        onClick={handleRefreshStatus}
-                        disabled={isRefreshing}
-                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isRefreshing && <Spinner size="sm" />}
-                        Refresh Status
-                    </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
                         className="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
