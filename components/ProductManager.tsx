@@ -5,7 +5,6 @@ import { useToast } from '../hooks/useToast';
 import { ProductList } from './ProductList';
 import { Spinner } from './Spinner';
 import { BulkAddProductsModal } from './BulkAddProductsModal';
-import { CreateSetModal } from './CreateSetModal';
 import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
 
@@ -23,7 +22,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isCreateSetModalOpen, setIsCreateSetModalOpen] = useState(false);
+    const [isCreatingSets, setIsCreatingSets] = useState(false);
     
     const { toasts, addToast, removeToast } = useToast();
 
@@ -88,6 +87,59 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
             addToast(`Failed to delete products: ${errorMessage}`, ToastType.ERROR);
         }
     };
+
+    const handleCreateSetsFromSelection = async () => {
+        if (selectedProducts.size === 0) {
+            addToast('Please select products to create sets from.', ToastType.INFO);
+            return;
+        }
+    
+        setIsCreatingSets(true);
+        try {
+            const selectedProductObjects = products.filter(p => selectedProducts.has(p.id));
+    
+            const creationPromises = selectedProductObjects.map(product => {
+                const setName = product.brand ? product.brand.trim() : '';
+                if (!setName) {
+                    logger.warn(`Skipping product "${product.name}" (ID: ${product.id}) because its brand is empty.`);
+                    return Promise.resolve({ status: 'skipped', product });
+                }
+                return service.createSet(setName, [product.id])
+                    .then(result => ({ status: 'fulfilled', value: result, product }))
+                    .catch(error => ({ status: 'rejected', reason: error, product }));
+            });
+    
+            const results = await Promise.all(creationPromises);
+            
+            const successfulCreations = results.filter(r => r.status === 'fulfilled').length;
+            const failedCreations = results.filter(r => r.status === 'rejected').length;
+            const skippedCreations = results.filter(r => r.status === 'skipped').length;
+            
+            if (successfulCreations > 0) {
+                addToast(`${successfulCreations} product set(s) created successfully.`, ToastType.SUCCESS);
+            }
+            if (failedCreations > 0) {
+                addToast(`${failedCreations} set(s) failed to create. Check logs for details.`, ToastType.ERROR);
+                results.filter((r): r is { status: 'rejected'; reason: any; product: Product } => r.status === 'rejected').forEach(r => {
+                    const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+                    logger.error(`Failed to create set for product "${r.product.name}": ${reason}`);
+                });
+            }
+            if (skippedCreations > 0) {
+                addToast(`${skippedCreations} product(s) were skipped due to an empty brand name.`, ToastType.INFO);
+            }
+    
+            if (successfulCreations > 0) {
+                setSelectedProducts(new Set());
+            }
+    
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            addToast(`An unexpected error occurred while creating sets: ${errorMessage}`, ToastType.ERROR);
+        } finally {
+            setIsCreatingSets(false);
+        }
+    };
     
     if (loading) {
         return (
@@ -118,10 +170,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                         Add Products
                     </button>
                     <button
-                        onClick={() => setIsCreateSetModalOpen(true)}
-                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        onClick={handleCreateSetsFromSelection}
+                        disabled={selectedProducts.size === 0 || isCreatingSets}
+                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
                     >
-                        Create Set ({selectedProducts.size})
+                        {isCreatingSets && <Spinner size="sm" />}
+                        Create Sets ({selectedProducts.size})
                     </button>
                     <button
                         onClick={handleDeleteSelected}
@@ -150,20 +204,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     existingProducts={products}
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
-                    logger={logger}
-                />
-            )}
-
-            {isCreateSetModalOpen && (
-                <CreateSetModal
-                    onClose={() => setIsCreateSetModalOpen(false)}
-                    service={service}
-                    allProducts={products}
-                    initiallySelectedProductIds={Array.from(selectedProducts)}
-                    onSetCreated={() => {
-                        setSelectedProducts(new Set());
-                        addToast('Product set created successfully!', ToastType.SUCCESS);
-                    }}
                     logger={logger}
                 />
             )}
