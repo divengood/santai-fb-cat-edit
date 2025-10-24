@@ -70,7 +70,10 @@ const SetEditor: React.FC<{
                     <ul className="mt-2 border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-40 overflow-y-auto">
                         {productsInSet.map(product => (
                             <li key={product.id} className="pl-3 pr-4 py-2 flex items-center justify-between text-sm">
-                                <span className="font-medium truncate">{product.name}</span>
+                                <div className="flex items-center gap-3 flex-1 w-0 truncate">
+                                    <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover flex-shrink-0"/>
+                                    <span className="font-medium truncate">{product.brand}</span>
+                                </div>
                                 <button type="button" onClick={() => toggleProductSelection(product.id)} className="ml-4 text-sm font-medium text-red-600 hover:text-red-500">Remove</button>
                             </li>
                         ))}
@@ -88,7 +91,10 @@ const SetEditor: React.FC<{
                         {availableProducts.map(product => (
                             <li key={product.id} className="pl-3 pr-4 py-3 flex items-center">
                                 <input type="checkbox" id={`bulk-edit-${state.id}-${product.id}`} checked={false} onChange={() => toggleProductSelection(product.id)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 rounded" />
-                                <label htmlFor={`bulk-edit-${state.id}-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer">{product.name}</label>
+                                <label htmlFor={`bulk-edit-${state.id}-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
+                                    <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover flex-shrink-0"/>
+                                    <span className="font-medium truncate">{product.brand}</span>
+                                </label>
                             </li>
                         ))}
                     </ul>

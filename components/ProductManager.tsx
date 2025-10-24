@@ -22,6 +22,8 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isCreatingSets, setIsCreatingSets] = useState(false);
+    const [nameFilter, setNameFilter] = useState('');
+    const [brandFilter, setBrandFilter] = useState('');
     
     const { toasts, addToast, removeToast } = useToast();
 
@@ -44,6 +46,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => {
+            const nameMatch = nameFilter ? product.name.toLowerCase().includes(nameFilter.toLowerCase()) : true;
+            const brandMatch = brandFilter ? product.brand.toLowerCase().includes(brandFilter.toLowerCase()) : true;
+            return nameMatch && brandMatch;
+        });
+    }, [products, nameFilter, brandFilter]);
 
     const handleDeleteSelected = async () => {
         if (selectedProducts.size === 0) return;
@@ -151,8 +161,25 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                 </div>
             </div>
             
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                    type="text"
+                    placeholder="Filter by product name..."
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    className="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700"
+                />
+                <input
+                    type="text"
+                    placeholder="Filter by brand..."
+                    value={brandFilter}
+                    onChange={(e) => setBrandFilter(e.target.value)}
+                    className="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700"
+                />
+            </div>
+
             <ProductList
-                products={products}
+                products={filteredProducts}
                 selectedProducts={selectedProducts}
                 setSelectedProducts={setSelectedProducts}
             />

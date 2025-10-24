@@ -22,20 +22,27 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedProducts(new Set(products.map(p => p.id)));
-    } else {
-      setSelectedProducts(new Set());
-    }
+    setSelectedProducts(prevSelected => {
+      const newSelection = new Set(prevSelected);
+      const productIdsInView = products.map(p => p.id);
+      if (e.target.checked) {
+        // Add all visible products to selection
+        productIdsInView.forEach(id => newSelection.add(id));
+      } else {
+        // Remove all visible products from selection
+        productIdsInView.forEach(id => newSelection.delete(id));
+      }
+      return newSelection;
+    });
   };
 
-  const isAllSelected = products.length > 0 && selectedProducts.size === products.length;
+  const isAllSelected = products.length > 0 && products.every(p => selectedProducts.has(p.id));
 
   if (products.length === 0) {
     return (
         <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-lg shadow">
             <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">No products found.</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Get started by adding a new product.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Adjust your filters or add a new product.</p>
         </div>
     );
   }
@@ -51,7 +58,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                     checked={isAllSelected}
                     onChange={handleSelectAll}
                 />
-                <label htmlFor="select-all-products" className="ml-3 text-sm font-medium">Select All</label>
+                <label htmlFor="select-all-products" className="ml-3 text-sm font-medium">Select All ({products.length} shown)</label>
             </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-6">
