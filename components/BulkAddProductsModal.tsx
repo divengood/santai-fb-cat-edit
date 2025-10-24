@@ -235,8 +235,8 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative">
         {showCreateSetConfirm && (
             <div className="absolute inset-0 bg-slate-900 bg-opacity-70 z-10 flex justify-center items-center p-4 rounded-lg">
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md text-center">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Создать под каждый товар отдельный сет?</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md text-center" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+                    <h3 id="dialog-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">Create a separate set for each product?</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                         A new set will be created for each product.
                         <br />
@@ -247,10 +247,10 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                             Cancel
                         </button>
                         <button type="button" onClick={() => handleConfirmation(false)} className="px-4 py-2 rounded-md bg-slate-600 text-white text-sm font-medium hover:bg-slate-700">
-                            Нет (No)
+                            No
                         </button>
                         <button type="button" onClick={() => handleConfirmation(true)} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-                            Да (Yes)
+                            Yes
                         </button>
                     </div>
                 </div>

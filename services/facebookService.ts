@@ -434,8 +434,7 @@ class FacebookCatalogService {
 
       return {
         method: 'POST',
-        relative_url: `${this.catalogId}/product_sets`,
-        body: params.toString(),
+        relative_url: `${this.catalogId}/product_sets?${params.toString()}`,
       };
     });
 
