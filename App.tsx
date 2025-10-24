@@ -91,13 +91,40 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRefreshSession = () => {
+    logger.info("Attempting to refresh Facebook session...");
+    if (typeof FB !== 'undefined' && FB.getLoginStatus) {
+        // The `true` argument forces a check with Facebook's servers for the latest status
+        FB.getLoginStatus((response: any) => {
+            if (response.status === 'connected' && response.authResponse) {
+                const newAccessToken = response.authResponse.accessToken;
+                setCredentials(prevCreds => {
+                    if (prevCreds && prevCreds.token !== newAccessToken) {
+                        logger.success("Facebook session refreshed successfully. New token acquired.");
+                        return { ...prevCreds, token: newAccessToken };
+                    } else if (prevCreds) {
+                         logger.info("Facebook session is still valid. No token update needed.");
+                        return prevCreds;
+                    }
+                    return null;
+                });
+            } else {
+                logger.error("Failed to refresh session. User is not connected or has de-authorized the app. Disconnecting.");
+                handleDisconnect();
+            }
+        }, true);
+    } else {
+        logger.warn("Cannot refresh session, Facebook SDK not available.");
+    }
+  };
+
   if (!credentials) {
     return <AuthScreen onConnect={handleConnect} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-      <Header onDisconnect={handleDisconnect} />
+      <Header onDisconnect={handleDisconnect} onRefreshSession={handleRefreshSession} />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">

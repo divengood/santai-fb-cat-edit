@@ -4,6 +4,15 @@ import { Logger } from './loggingService';
 const API_VERSION = 'v19.0';
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
+const OAUTH_DETAILED_ERROR = `
+
+Authentication Error (OAuthException): This can happen for several reasons. Please check the following:
+1. Session Expired: Your login may have timed out. Please try disconnecting and logging back in.
+2. Permissions: Ensure you granted the 'catalog_management' permission during login.
+3. Facebook App Settings: Verify your App ID is correct and that your Facebook App is published (or you are listed as a developer/tester if it's in development mode).
+4. User Role: You must be an admin of the Business Manager account that owns the product catalog.`;
+
+
 interface BatchRequest {
     method: 'GET' | 'POST' | 'DELETE';
     relative_url: string;
@@ -22,6 +31,10 @@ class FacebookCatalogService {
     this.apiToken = apiToken;
     this.catalogId = catalogId;
     this.logger = logger;
+  }
+  
+  private isOAuthError(errorBody: any): boolean {
+    return errorBody?.error && (errorBody.error.type === 'OAuthException' || errorBody.error.code === 1);
   }
 
   private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object) {
@@ -61,6 +74,9 @@ class FacebookCatalogService {
             const errorData = JSON.parse(responseText);
             console.error('Facebook API Error:', errorData);
             errorMessage = errorData.error?.message || responseText;
+            if (this.isOAuthError(errorData)) {
+                errorMessage += OAUTH_DETAILED_ERROR;
+            }
         } catch (e) {
             console.error('Facebook API non-JSON error:', responseText);
             errorMessage = `Request failed with status ${response.status}: ${responseText}`;
@@ -98,6 +114,9 @@ class FacebookCatalogService {
             const errorData = JSON.parse(responseText);
             console.error('Facebook Batch API Error:', errorData);
             errorMessage = errorData.error?.message || responseText;
+             if (this.isOAuthError(errorData)) {
+                errorMessage += OAUTH_DETAILED_ERROR;
+            }
         } catch (e) {
             console.error('Facebook Batch API non-JSON error:', responseText);
             errorMessage = `Batch request failed with status ${response.status}: ${responseText}`;
@@ -121,7 +140,11 @@ class FacebookCatalogService {
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('Facebook API Error:', errorData);
-                throw new Error(errorData.error?.message || 'An unknown API error occurred while paginating.');
+                let errorMessage = errorData.error?.message || 'An unknown API error occurred while paginating.';
+                 if (this.isOAuthError(errorData)) {
+                    errorMessage += OAUTH_DETAILED_ERROR;
+                }
+                throw new Error(errorMessage);
             }
             
             const responseData = await response.json();
@@ -192,6 +215,7 @@ class FacebookCatalogService {
             .filter(({ res }) => res && res.code !== 200);
 
         if (failures.length > 0) {
+            let isAuthError = false;
             const errorDetails = failures.map(({ res, index }) => {
                 const originalRequestData = newProducts[index];
                 let detail = `- Product "${originalRequestData.name}" (SKU: ${originalRequestData.retailer_id}): `;
@@ -199,6 +223,9 @@ class FacebookCatalogService {
                     const errorBody = JSON.parse(res.body);
                     if (errorBody.error && errorBody.error.message) {
                         const { message, type, code, error_subcode } = errorBody.error;
+                        if (type === 'OAuthException' || code === 1) {
+                            isAuthError = true;
+                        }
                         detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
                     } else {
                         detail += 'An unknown API error occurred.';
@@ -209,7 +236,10 @@ class FacebookCatalogService {
                 return detail;
             }).join('\n');
             
-            const errorMessage = `${failures.length} of ${newProducts.length} products failed to be added:\n${errorDetails}`;
+            let errorMessage = `${failures.length} of ${newProducts.length} products failed to be added:\n${errorDetails}`;
+            if (isAuthError) {
+                errorMessage += OAUTH_DETAILED_ERROR;
+            }
             throw new Error(errorMessage);
         }
 
@@ -236,6 +266,7 @@ class FacebookCatalogService {
             .filter(({ res }) => res && res.code !== 200);
         
         if (failures.length > 0) {
+            let isAuthError = false;
             const errorDetails = failures.map(({ res, index }) => {
                 const productId = productIds[index];
                 let detail = `- Product ID ${productId}: `;
@@ -243,6 +274,9 @@ class FacebookCatalogService {
                     const errorBody = JSON.parse(res.body);
                      if (errorBody.error && errorBody.error.message) {
                         const { message, type, code, error_subcode } = errorBody.error;
+                         if (type === 'OAuthException' || code === 1) {
+                            isAuthError = true;
+                        }
                         detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
                     } else {
                         detail += 'An unknown API error occurred.';
@@ -252,7 +286,11 @@ class FacebookCatalogService {
                 }
                 return detail;
             }).join('\n');
-            const errorMessage = `${failures.length} of ${productIds.length} products failed to be deleted:\n${errorDetails}`;
+
+            let errorMessage = `${failures.length} of ${productIds.length} products failed to be deleted:\n${errorDetails}`;
+            if (isAuthError) {
+                errorMessage += OAUTH_DETAILED_ERROR;
+            }
             throw new Error(errorMessage);
         }
         
@@ -395,6 +433,7 @@ class FacebookCatalogService {
             .filter(({ res }) => res && res.code !== 200);
 
         if (failures.length > 0) {
+            let isAuthError = false;
             const errorDetails = failures.map(({ res, index }) => {
                 const setId = setIds[index];
                 let detail = `- Set ID ${setId}: `;
@@ -402,6 +441,9 @@ class FacebookCatalogService {
                     const errorBody = JSON.parse(res.body);
                      if (errorBody.error && errorBody.error.message) {
                         const { message, type, code, error_subcode } = errorBody.error;
+                        if (type === 'OAuthException' || code === 1) {
+                            isAuthError = true;
+                        }
                         detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
                     } else {
                         detail += 'An unknown API error occurred.';
@@ -412,7 +454,10 @@ class FacebookCatalogService {
                 return detail;
             }).join('\n');
             
-            const errorMessage = `${failures.length} of ${setIds.length} sets failed to be deleted:\n${errorDetails}`;
+            let errorMessage = `${failures.length} of ${setIds.length} sets failed to be deleted:\n${errorDetails}`;
+            if (isAuthError) {
+                errorMessage += OAUTH_DETAILED_ERROR;
+            }
             throw new Error(errorMessage);
         }
         

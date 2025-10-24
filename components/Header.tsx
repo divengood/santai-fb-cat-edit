@@ -2,9 +2,10 @@ import React from 'react';
 
 interface HeaderProps {
     onDisconnect: () => void;
+    onRefreshSession: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onDisconnect }) => {
+export const Header: React.FC<HeaderProps> = ({ onDisconnect, onRefreshSession }) => {
   return (
     <header className="bg-white dark:bg-slate-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,12 +16,20 @@ export const Header: React.FC<HeaderProps> = ({ onDisconnect }) => {
             </svg>
             <span className="font-bold text-xl text-slate-800 dark:text-slate-100">Catalog Manager</span>
           </div>
-           <button
-            onClick={onDisconnect}
-            className="inline-flex items-center justify-center rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900 transition-colors"
-          >
-            Disconnect
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onRefreshSession}
+              className="inline-flex items-center justify-center rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900 transition-colors"
+            >
+              Refresh Session
+            </button>
+            <button
+              onClick={onDisconnect}
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900 transition-colors"
+            >
+              Disconnect
+            </button>
+          </div>
         </div>
       </div>
     </header>
