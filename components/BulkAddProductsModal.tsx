@@ -87,6 +87,32 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     }
   };
 
+  const handleApplyImageToAll = (sourceIndex: number) => {
+    const sourceRow = productRows[sourceIndex];
+    if (sourceRow.imageUploadState !== 'success' || !sourceRow.imageUrl) {
+        return;
+    }
+
+    const { imageUrl, localImagePreview, fileName } = sourceRow;
+    logger?.info(`Applying image from row ${sourceIndex + 1} to all other rows.`);
+
+    setProductRows(currentRows => 
+        currentRows.map((row, index) => {
+            if (index === sourceIndex) {
+                return row;
+            }
+            return {
+                ...row,
+                imageUrl,
+                localImagePreview,
+                fileName,
+                imageUploadState: 'success',
+                imageUploadError: undefined,
+            };
+        })
+    );
+  };
+
 
   const addProductRow = () => {
     setProductRows([...productRows, { ...emptyProductRow }]);
@@ -219,8 +245,20 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                         )}
                         {product.imageUploadState === 'success' && product.localImagePreview && (
                             <div className="flex items-center gap-2 text-sm">
-                                <img src={product.localImagePreview} alt="preview" className="h-10 w-10 object-cover rounded"/>
-                                <span className="truncate text-green-600 dark:text-green-400">{product.fileName}</span>
+                                <img src={product.localImagePreview} alt="preview" className="h-10 w-10 object-cover rounded flex-shrink-0"/>
+                                <div className="flex-grow truncate">
+                                   <span className="truncate text-green-600 dark:text-green-400">{product.fileName}</span>
+                                </div>
+                                {productRows.length > 1 && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handleApplyImageToAll(index)}
+                                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0 px-2"
+                                        title="Apply this image to all other product rows"
+                                    >
+                                        Apply to all
+                                    </button>
+                                )}
                             </div>
                         )}
                         {product.imageUploadState === 'error' && (
