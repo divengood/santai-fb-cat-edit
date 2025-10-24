@@ -6,7 +6,6 @@ import { AuthScreen } from './components/AuthScreen';
 import { LogEntry } from './types';
 import { Logger } from './services/loggingService';
 import { LogViewer } from './components/LogViewer';
-import { StatusManager } from './components/StatusManager';
 
 // Make FB object available from the script loaded in index.html
 declare const FB: any;
@@ -14,7 +13,6 @@ declare const FB: any;
 enum View {
   PRODUCTS,
   SETS,
-  STATUS,
   LOGS,
 }
 
@@ -129,16 +127,6 @@ const App: React.FC = () => {
               >
                 Product Sets
               </button>
-               <button
-                onClick={() => setView(View.STATUS)}
-                className={`${
-                  view === View.STATUS
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
-              >
-                Status
-              </button>
               <button
                 onClick={() => setView(View.LOGS)}
                 className={`${
@@ -166,13 +154,6 @@ const App: React.FC = () => {
               <SetManager 
                 apiToken={credentials.token} 
                 catalogId={credentials.catalogId} 
-                logger={logger}
-              />
-            )}
-            {view === View.STATUS && (
-              <StatusManager
-                apiToken={credentials.token}
-                catalogId={credentials.catalogId}
                 logger={logger}
               />
             )}

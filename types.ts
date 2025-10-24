@@ -10,8 +10,6 @@ export interface Product {
   imageUrl: string;
   inventory: number;
   videoUrl?: string;
-  reviewStatus: string | null;
-  rejectionReasons?: string[];
 }
 
 export interface ProductSet {
@@ -20,7 +18,7 @@ export interface ProductSet {
   productIds: string[];
 }
 
-export type NewProduct = Omit<Product, 'id' | 'reviewStatus' | 'rejectionReasons'>;
+export type NewProduct = Omit<Product, 'id'>;
 
 export enum ToastType {
     SUCCESS = 'SUCCESS',
