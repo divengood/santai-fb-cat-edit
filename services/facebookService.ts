@@ -419,6 +419,69 @@ class FacebookCatalogService {
     }
   }
 
+  async createSetsBatch(setsToCreate: { name: string; productIds: string[] }[]): Promise<any> {
+    if (setsToCreate.length === 0) return [];
+    this.logger?.info(`Attempting to batch create ${setsToCreate.length} product set(s)...`);
+
+    const requests: BatchRequest[] = setsToCreate.map(set => {
+      const filter = {
+        product_item_id: { is_any: set.productIds }
+      };
+      
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('name', set.name);
+      bodyParams.append('filter', JSON.stringify(filter));
+
+      return {
+        method: 'POST',
+        relative_url: `${this.catalogId}/product_sets`,
+        body: bodyParams.toString()
+      };
+    });
+
+    try {
+      const batchResponses = await this.batchRequest(requests);
+      const failures = batchResponses
+        .map((res: any, index: number) => ({ res, index }))
+        .filter(({ res }) => res && res.code !== 200);
+
+      if (failures.length > 0) {
+        let isAuthError = false;
+        const errorDetails = failures.map(({ res, index }) => {
+          const originalSetData = setsToCreate[index];
+          let detail = `- Set "${originalSetData.name}": `;
+          try {
+            const errorBody = JSON.parse(res.body);
+            if (errorBody.error && errorBody.error.message) {
+              const { message, type, code, error_subcode } = errorBody.error;
+              if (type === 'OAuthException' || code === 1) {
+                isAuthError = true;
+              }
+              detail += `${message} (Code: ${code}, Type: ${type}${error_subcode ? `, Subcode: ${error_subcode}` : ''})`;
+            } else {
+              detail += 'An unknown API error occurred.';
+            }
+          } catch (e) {
+            detail += `Could not parse error response. Body: ${res.body}`;
+          }
+          return detail;
+        }).join('\n');
+
+        let errorMessage = `${failures.length} of ${setsToCreate.length} sets failed to be created:\n${errorDetails}`;
+        if (isAuthError) {
+          errorMessage += OAUTH_DETAILED_ERROR;
+        }
+        throw new Error(errorMessage);
+      }
+
+      this.logger?.success(`Successfully submitted batch request to create ${setsToCreate.length} set(s).`);
+      return batchResponses;
+    } catch (error) {
+      this.logger?.error("Failed to create sets batch", error);
+      throw error;
+    }
+  }
+
   async deleteSets(setIds: string[]): Promise<any> {
     if (setIds.length === 0) return [];
     this.logger?.info(`Attempting to delete ${setIds.length} set(s)...`);
