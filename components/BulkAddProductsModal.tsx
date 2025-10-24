@@ -34,9 +34,6 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
   const [productRows, setProductRows] = useState<ProductRowState[]>([{ ...emptyProductRow }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [showCreateSetConfirm, setShowCreateSetConfirm] = useState(false);
-  const [productsReadyForSubmit, setProductsReadyForSubmit] = useState<NewProduct[] | null>(null);
-
 
   const handleProductChange = (index: number, field: keyof Omit<NewProduct, 'retailer_id'>, value: string | number) => {
     const newProducts = [...productRows];
@@ -141,7 +138,7 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     setProductRows(newProducts);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -175,54 +172,16 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
         return;
     }
     
-    setProductsReadyForSubmit(productsToSubmit);
-    setShowCreateSetConfirm(true);
-  };
-
-  const handleConfirmation = async (shouldCreateSets: boolean) => {
-    if (!productsReadyForSubmit) return;
-
-    setShowCreateSetConfirm(false);
     setIsSubmitting(true);
-    setError('');
-
     try {
-        const addProductResponses = await service.addProducts(productsReadyForSubmit);
-        
-        if (shouldCreateSets) {
-            const setsToCreate: { name: string; productIds: string[] }[] = [];
-            addProductResponses.forEach((res: any, index: number) => {
-                if (res && res.code === 200) {
-                    try {
-                        const body = JSON.parse(res.body);
-                        const newProductId = body.id;
-                        const originalProduct = productsReadyForSubmit[index];
-                        if (newProductId && originalProduct.brand?.trim()) {
-                            setsToCreate.push({
-                                name: originalProduct.brand.trim(),
-                                productIds: [newProductId]
-                            });
-                        }
-                    } catch(e) {
-                         logger?.warn(`Could not parse product creation response for item at index ${index}. Set will not be created.`);
-                    }
-                }
-            });
-
-            if (setsToCreate.length > 0) {
-                await service.createSetsBatch(setsToCreate);
-                logger?.success(`Submitted requests to create ${setsToCreate.length} sets for the new products.`);
-            }
-        }
-
-        onProductsAdded();
-        onClose();
-    } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-        setError(`Operation failed: ${errorMessage}`);
+      await service.addProducts(productsToSubmit);
+      onProductsAdded();
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      setError(`Failed to add products: ${errorMessage}`);
     } finally {
-        setIsSubmitting(false);
-        setProductsReadyForSubmit(null);
+      setIsSubmitting(false);
     }
   };
   
@@ -232,30 +191,7 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative">
-        {showCreateSetConfirm && (
-            <div className="absolute inset-0 bg-slate-900 bg-opacity-70 z-10 flex justify-center items-center p-4 rounded-lg">
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md text-center" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-                    <h3 id="dialog-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">Create a separate set for each product?</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                        A new set will be created for each product.
-                        <br />
-                        <span className="text-xs">(The set name will be taken from the "Brand" field)</span>
-                    </p>
-                    <div className="flex justify-center gap-3 mt-6">
-                        <button type="button" onClick={() => { setShowCreateSetConfirm(false); setProductsReadyForSubmit(null); }} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm font-medium bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">
-                            Cancel
-                        </button>
-                        <button type="button" onClick={() => handleConfirmation(false)} className="px-4 py-2 rounded-md bg-slate-600 text-white text-sm font-medium hover:bg-slate-700">
-                            No
-                        </button>
-                        <button type="button" onClick={() => handleConfirmation(true)} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-                            Yes
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold">Bulk Add Products</h2>
             <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
@@ -347,7 +283,7 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm font-medium bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting || isAnyImageUploading || showCreateSetConfirm} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-slate-400 flex items-center gap-2">
+            <button type="submit" disabled={isSubmitting || isAnyImageUploading} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-slate-400 flex items-center gap-2">
               {isSubmitting && <Spinner size="sm" />}
               {isSubmitting ? 'Adding...' : `Add ${productRows.length} Products`}
             </button>
