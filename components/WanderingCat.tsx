@@ -18,7 +18,14 @@ export const WanderingCat: React.FC = () => {
     const catElement = catRef.current;
     if (!catElement) return;
 
+    // We need to determine the initial direction based on the animation delay.
+    // A -15s delay on a 30s animation effectively starts it halfway through.
+    // The animation goes from left to right, so at 15s, it's moving right.
+    setDirection('right');
+
+
     const handleAnimationIteration = () => {
+      // The direction flips at each end of the alternate animation
       setDirection(prev => (prev === 'left' ? 'right' : 'left'));
     };
 
@@ -125,11 +132,13 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
+            left: '50vw', // Set initial position to the middle of the screen.
             height: '50px',
             zIndex: 9999,
             pointerEvents: 'none',
             transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
-            animation: 'walk-horizontal 30s linear infinite alternate',
+            // Start the animation halfway through using a negative delay.
+            animation: 'walk-horizontal 30s linear -15s infinite alternate',
             animationPlayState: isPaused ? 'paused' : 'running',
           }}
         />
