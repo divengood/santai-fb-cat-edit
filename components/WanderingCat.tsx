@@ -127,7 +127,7 @@ export const WanderingCat: React.FC = () => {
       `}</style>
       <img
           ref={catRef}
-          src="https://media.tenor.com/J2gbf_g_jqsAAAAi/cat-walking.gif"
+          src="https://raw.githubusercontent.com/tonybaloney/vscode-pets/main/media/cat.gif"
           alt="Wandering cat"
           style={{
             position: 'fixed',

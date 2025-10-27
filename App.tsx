@@ -54,12 +54,6 @@ const App: React.FC = () => {
     }
     return false;
   });
-   const [isCatVisible, setIsCatVisible] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('catVisible') === 'true';
-    }
-    return false;
-  });
   
   const logger = useMemo(() => new Logger(setLogs), [setLogs]);
 
@@ -86,22 +80,12 @@ const App: React.FC = () => {
     }
   }, [isMuted]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('catVisible', String(isCatVisible));
-    }
-  }, [isCatVisible]);
-
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
   
   const toggleMute = () => {
     setIsMuted(prev => !prev);
-  };
-  
-  const toggleCatVisibility = () => {
-    setIsCatVisible(prev => !prev);
   };
 
   const playSound = (soundUrl: string) => {
@@ -165,8 +149,6 @@ const App: React.FC = () => {
         toggleTheme={toggleTheme} 
         isMuted={isMuted} 
         toggleMute={toggleMute}
-        isCatVisible={isCatVisible}
-        toggleCatVisibility={toggleCatVisibility}
       />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
@@ -234,7 +216,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
-      {isCatVisible && <WanderingCat />}
+      <WanderingCat />
     </div>
   );
 };
