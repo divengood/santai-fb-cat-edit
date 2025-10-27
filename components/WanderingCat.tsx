@@ -84,10 +84,6 @@ export const WanderingCat: React.FC = () => {
   return (
     <>
       <style>{`
-        @keyframes walk-horizontal {
-          0% { left: -100px; }
-          100% { left: calc(100vw - 20px); }
-        }
         .thought-bubble {
             position: fixed;
             background: white;
@@ -129,9 +125,9 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
-            left: '-100px', // Explicitly set initial position to match animation start
+            left: '-100px',
             height: '50px',
-            zIndex: 999,
+            zIndex: 9999,
             pointerEvents: 'none',
             transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
             animation: 'walk-horizontal 30s linear infinite alternate',
