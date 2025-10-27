@@ -132,12 +132,12 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
-            left: '50vw', // Set initial position to the middle of the screen.
             height: '50px',
             zIndex: 9999,
             pointerEvents: 'none',
             transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
             // Start the animation halfway through using a negative delay.
+            // The animation itself controls the `left` property.
             animation: 'walk-horizontal 30s linear -15s infinite alternate',
             animationPlayState: isPaused ? 'paused' : 'running',
           }}
