@@ -7,6 +7,7 @@ import { Spinner } from './Spinner';
 import { BulkAddProductsModal } from './BulkAddProductsModal';
 import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
+import { EditProductModal } from './EditProductModal';
 
 interface ProductManagerProps {
     apiToken: string;
@@ -21,6 +22,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [loading, setLoading] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isCreatingSets, setIsCreatingSets] = useState(false);
     const [nameFilter, setNameFilter] = useState('');
     const [brandFilter, setBrandFilter] = useState('');
@@ -182,6 +184,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                 products={filteredProducts}
                 selectedProducts={selectedProducts}
                 setSelectedProducts={setSelectedProducts}
+                onEdit={(product) => setEditingProduct(product)}
             />
 
             {isAddModalOpen && (
@@ -193,6 +196,21 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                         addToast('Products added successfully!', ToastType.SUCCESS);
                     }}
                     existingProducts={products}
+                    cloudinaryCloudName={cloudinaryCloudName}
+                    cloudinaryUploadPreset={cloudinaryUploadPreset}
+                    logger={logger}
+                />
+            )}
+
+            {editingProduct && (
+                <EditProductModal
+                    onClose={() => setEditingProduct(null)}
+                    service={service}
+                    product={editingProduct}
+                    onProductUpdated={() => {
+                        fetchProducts();
+                        addToast(`Product "${editingProduct.name}" updated successfully!`, ToastType.SUCCESS);
+                    }}
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
                     logger={logger}

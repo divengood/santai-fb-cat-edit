@@ -5,9 +5,10 @@ interface ProductListProps {
   products: Product[];
   selectedProducts: Set<string>;
   setSelectedProducts: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onEdit: (product: Product) => void;
 }
 
-export const ProductList: React.FC<ProductListProps> = ({ products, selectedProducts, setSelectedProducts }) => {
+export const ProductList: React.FC<ProductListProps> = ({ products, selectedProducts, setSelectedProducts, onEdit }) => {
 
   const handleSelectProduct = (productId: string) => {
     setSelectedProducts(prev => {
@@ -61,7 +62,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                 <label htmlFor="select-all-products" className="ml-3 text-sm font-medium">Select All ({products.length} shown)</label>
             </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 py-6">
             {products.map((product) => {
                 return (
                     <div
@@ -71,10 +72,10 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                     >
                         <div>
                             <div className="relative">
-                                <div className="absolute top-3 left-3 z-10">
+                                <div className="absolute top-2 left-2 z-10">
                                     <input
                                         type="checkbox"
-                                        className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         checked={selectedProducts.has(product.id)}
                                         readOnly
                                     />
@@ -83,14 +84,25 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                                 </div>
                             </div>
-                            <div className="p-4">
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{product.brand}</p>
-                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-semibold text-slate-900 dark:text-slate-100 hover:underline block truncate mt-1">{product.name}</a>
-                                <div className="flex justify-between items-center mt-3">
-                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
+                            <div className="p-3">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{product.brand}</p>
+                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-medium text-sm text-slate-900 dark:text-slate-100 hover:underline block truncate mt-0.5" title={product.name}>{product.name}</a>
+                                <div className="flex justify-between items-center mt-2">
+                                    <p className="text-base font-bold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
                                 </div>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">SKU: {product.retailer_id}</p>
+                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500">SKU: {product.retailer_id}</p>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(product);
+                                        }}
+                                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

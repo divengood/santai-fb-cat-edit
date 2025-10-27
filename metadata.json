@@ -1,5 +1,5 @@
 {
-  "name": "Facebook Catalog Manager",
+  "name": "Facebook редактор каталогов",
   "description": "A web application to manage Facebook product catalogs via API, allowing for bulk operations on products and product sets.",
   "requestFramePermissions": []
 }

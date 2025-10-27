@@ -300,6 +300,38 @@ class FacebookCatalogService {
     }
   }
 
+  async updateProduct(productId: string, updates: Partial<NewProduct>): Promise<any> {
+    this.logger?.info(`Updating product ID: ${productId}...`);
+    
+    // Transform data for the API
+    const payload: { [key: string]: any } = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.brand !== undefined) payload.brand = updates.brand;
+    if (updates.link !== undefined) payload.url = updates.link;
+    if (updates.price !== undefined) payload.price = Math.round(updates.price * 100);
+    if (updates.currency !== undefined) payload.currency = updates.currency;
+    if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+    if (updates.inventory !== undefined) {
+      payload.inventory = updates.inventory;
+      payload.availability = updates.inventory > 0 ? 'in stock' : 'out of stock';
+    }
+    
+    if (Object.keys(payload).length === 0) {
+        this.logger?.warn("Update called with no changes for product ID: " + productId);
+        return { success: true, message: "No changes provided." };
+    }
+
+    try {
+        const response = await this.apiRequest(`/${productId}`, 'POST', payload);
+        this.logger?.success(`Successfully updated product ID: ${productId}.`);
+        return response;
+    } catch (error) {
+        this.logger?.error(`Failed to update product ID: ${productId}`, error);
+        throw error;
+    }
+  }
+
   async getSets(): Promise<ProductSet[]> {
     this.logger?.info("Fetching product sets...");
     const path = `/${this.catalogId}/product_sets?fields=id,name`;
