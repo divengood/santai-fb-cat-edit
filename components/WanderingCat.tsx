@@ -11,7 +11,6 @@ export const WanderingCat: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [thoughtBubble, setThoughtBubble] = useState<ThoughtBubble>({ top: 0, left: 0, visible: false });
   const catRef = useRef<HTMLImageElement>(null);
-  // FIX: In a browser environment, setTimeout returns a number, not a NodeJS.Timeout object.
   const interactionTimeoutRef = useRef<number | null>(null);
   const pauseTimeoutRef = useRef<number | null>(null);
 
@@ -20,16 +19,17 @@ export const WanderingCat: React.FC = () => {
     if (!catElement) return;
 
     const handleAnimationIteration = () => {
-      setDirection(prev => prev === 'left' ? 'right' : 'left');
+      setDirection(prev => (prev === 'left' ? 'right' : 'left'));
     };
 
     catElement.addEventListener('animationiteration', handleAnimationIteration);
     
     // Function to schedule the next pause
     const schedulePause = () => {
+        if (pauseTimeoutRef.current) window.clearTimeout(pauseTimeoutRef.current);
         const randomDelay = Math.random() * 10000 + 8000; // Pause every 8-18 seconds
         
-        pauseTimeoutRef.current = setTimeout(() => {
+        pauseTimeoutRef.current = window.setTimeout(() => {
             setIsPaused(true);
         }, randomDelay);
     };
@@ -38,8 +38,8 @@ export const WanderingCat: React.FC = () => {
 
     return () => {
       catElement.removeEventListener('animationiteration', handleAnimationIteration);
-      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
-      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+      if (interactionTimeoutRef.current) window.clearTimeout(interactionTimeoutRef.current);
+      if (pauseTimeoutRef.current) window.clearTimeout(pauseTimeoutRef.current);
     };
   }, []);
 
@@ -67,12 +67,13 @@ export const WanderingCat: React.FC = () => {
       }
 
       // Unpause after a few seconds
-      interactionTimeoutRef.current = setTimeout(() => {
+      interactionTimeoutRef.current = window.setTimeout(() => {
         setIsPaused(false);
         setThoughtBubble(prev => ({ ...prev, visible: false }));
+        
         // Reschedule the next pause
         const randomDelay = Math.random() * 10000 + 8000;
-         pauseTimeoutRef.current = setTimeout(() => {
+         pauseTimeoutRef.current = window.setTimeout(() => {
             setIsPaused(true);
         }, randomDelay);
 
@@ -86,9 +87,6 @@ export const WanderingCat: React.FC = () => {
         @keyframes walk-horizontal {
           0% { left: -100px; }
           100% { left: calc(100vw - 20px); }
-        }
-        .cat-animation {
-          animation: walk-horizontal 30s linear infinite alternate;
         }
         .thought-bubble {
             position: fixed;
@@ -124,25 +122,21 @@ export const WanderingCat: React.FC = () => {
             filter: drop-shadow(0 1px 0.5px #ccc);
         }
       `}</style>
-      <div 
-        className="fixed bottom-0 left-0 z-50 pointer-events-none"
-        style={{ height: '70px' }}
-      >
-        <img
+      <img
           ref={catRef}
           src="https://media.tenor.com/J2gbf_g_jqsAAAAi/cat-walking.gif"
           alt="Wandering cat"
-          className="cat-animation"
           style={{
-            position: 'absolute',
-            bottom: '0',
-            left: '-100px', // Explicitly set initial off-screen position
+            position: 'fixed',
+            bottom: '10px',
             height: '50px',
-            transform: direction === 'left' ? 'scaleX(-1)' : 'scaleX(1)',
+            zIndex: 999,
+            pointerEvents: 'none',
+            transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
+            animation: 'walk-horizontal 30s linear infinite alternate',
             animationPlayState: isPaused ? 'paused' : 'running',
           }}
         />
-      </div>
       <div className={`thought-bubble ${thoughtBubble.visible ? 'visible' : ''}`} style={{ top: thoughtBubble.top, left: thoughtBubble.left }}>
         <span role="img" aria-label="heart" style={{ fontSize: '24px' }}>❤️</span>
       </div>
