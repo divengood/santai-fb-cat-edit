@@ -47,6 +47,12 @@ const App: React.FC = () => {
     }
     return 'light';
   });
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('soundMuted') === 'true';
+    }
+    return false;
+  });
   
   const logger = useMemo(() => new Logger(setLogs), [setLogs]);
 
@@ -66,9 +72,26 @@ const App: React.FC = () => {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('soundMuted', String(isMuted));
+    }
+  }, [isMuted]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+  
+  const toggleMute = () => {
+    setIsMuted(prev => !prev);
+  };
+  
+  const playSound = (soundUrl: string) => {
+    if (!isMuted) {
+      const audio = new Audio(soundUrl);
+      audio.play().catch(e => console.error("Error playing sound:", e));
+    }
   };
 
   useEffect(() => {
@@ -119,7 +142,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans">
-      <Header onDisconnect={handleDisconnect} theme={theme} toggleTheme={toggleTheme} />
+      <Header onDisconnect={handleDisconnect} theme={theme} toggleTheme={toggleTheme} isMuted={isMuted} toggleMute={toggleMute} />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
@@ -170,6 +193,7 @@ const App: React.FC = () => {
                 cloudinaryCloudName={credentials.cloudinaryCloudName}
                 cloudinaryUploadPreset={credentials.cloudinaryUploadPreset}
                 logger={logger}
+                playSound={playSound}
               />
             )}
             {view === View.SETS && (

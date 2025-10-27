@@ -9,15 +9,18 @@ import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
 import { EditProductModal } from './EditProductModal';
 
+const COIN_SOUND_URL = 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_165a995381.mp3?filename=coins-100142.mp3';
+
 interface ProductManagerProps {
     apiToken: string;
     catalogId: string;
     cloudinaryCloudName: string;
     cloudinaryUploadPreset: string;
     logger: Logger;
+    playSound: (soundUrl: string) => void;
 }
 
-export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalogId, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
+export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalogId, cloudinaryCloudName, cloudinaryUploadPreset, logger, playSound }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
@@ -194,6 +197,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     onProductsAdded={() => {
                         fetchProducts();
                         addToast('Products added successfully!', ToastType.SUCCESS);
+                        playSound(COIN_SOUND_URL);
                     }}
                     existingProducts={products}
                     cloudinaryCloudName={cloudinaryCloudName}
