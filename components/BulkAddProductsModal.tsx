@@ -125,16 +125,36 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
   };
 
   const duplicateProductRow = (index: number) => {
-    const productToCopy: ProductRowState = { ...productRows[index] };
-    // Reset image state for the new row
-    productToCopy.imageUploadState = 'idle';
-    productToCopy.imageUrl = '';
-    productToCopy.fileName = undefined;
-    productToCopy.localImagePreview = undefined;
-    productToCopy.imageUploadError = undefined;
+    const numCopiesStr = window.prompt("How many copies would you like to create?", "1");
+    if (numCopiesStr === null) {
+      return; // User cancelled
+    }
+    
+    const numCopies = parseInt(numCopiesStr, 10);
+    if (isNaN(numCopies) || numCopies < 1) {
+      alert("Please enter a valid number greater than 0.");
+      return;
+    }
+
+    const productToCopyTemplate = { ...productRows[index] };
+    
+    const newCopies: ProductRowState[] = [];
+    for (let i = 0; i < numCopies; i++) {
+        // Create a distinct copy
+        const newCopy: ProductRowState = {
+            ...productToCopyTemplate,
+            // Reset image state for each new row
+            imageUploadState: 'idle',
+            imageUrl: '',
+            fileName: undefined,
+            localImagePreview: undefined,
+            imageUploadError: undefined,
+        };
+        newCopies.push(newCopy);
+    }
 
     const newProducts = [...productRows];
-    newProducts.splice(index + 1, 0, productToCopy);
+    newProducts.splice(index + 1, 0, ...newCopies);
     setProductRows(newProducts);
   };
 
