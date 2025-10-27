@@ -41,21 +41,21 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
 
   if (products.length === 0) {
     return (
-        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">No products found.</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Adjust your filters or add a new product.</p>
+        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No products found.</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Adjust your filters or add a new product.</p>
         </div>
     );
   }
 
   return (
     <div>
-        <div className="px-4 py-3 sm:px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-t-lg shadow">
+        <div className="px-4 py-3 sm:px-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-lg">
             <div className="flex items-center">
                 <input
                     type="checkbox"
                     id="select-all-products"
-                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-slate-100 dark:bg-slate-700"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700"
                     checked={isAllSelected}
                     onChange={handleSelectAll}
                 />
@@ -67,15 +67,15 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                 return (
                     <div
                         key={product.id}
-                        className={`bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 cursor-pointer flex flex-col justify-between ${selectedProducts.has(product.id) ? 'ring-2 ring-blue-500' : 'ring-1 ring-slate-200 dark:ring-slate-700'}`}
+                        className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-all duration-200 cursor-pointer flex flex-col justify-between border ${selectedProducts.has(product.id) ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}
                         onClick={() => handleSelectProduct(product.id)}
                     >
                         <div>
                             <div className="relative">
-                                <div className="absolute top-1.5 left-1.5 z-10">
+                                <div className="absolute top-2 left-2 z-10">
                                     <input
                                         type="checkbox"
-                                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                         checked={selectedProducts.has(product.id)}
                                         readOnly
                                     />
@@ -84,26 +84,28 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                                 </div>
                             </div>
-                            <div className="p-2">
-                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{product.brand}</p>
-                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-medium text-xs text-slate-900 dark:text-slate-100 hover:underline block truncate mt-0.5" title={product.name}>{product.name}</a>
-                                <div className="flex justify-between items-center mt-1">
-                                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
+                            <div className="p-2 space-y-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{product.brand}</p>
+                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-semibold text-sm leading-tight text-gray-800 dark:text-gray-100 hover:underline block" title={product.name}>{product.name}</a>
+                                <div className="flex justify-between items-center pt-1">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-gray-200">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
                                 </div>
-                                <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-200 dark:border-slate-700">
-                                    <p className="text-xs text-slate-400 dark:text-slate-500">SKU: {product.retailer_id}</p>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onEdit(product);
-                                        }}
-                                        className="px-2 py-0.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                                    >
-                                        Edit
-                                    </button>
+                                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                    <p>SKU: {product.retailer_id}</p>
+                                    <p>Stock: {product.inventory}</p>
                                 </div>
                             </div>
+                        </div>
+                        <div className="p-2 pt-1">
+                             <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(product);
+                                }}
+                                className="w-full px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                            >
+                                Edit
+                            </button>
                         </div>
                     </div>
                 )

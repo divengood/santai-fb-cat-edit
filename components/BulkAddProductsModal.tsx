@@ -207,28 +207,28 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
   
   const isAnyImageUploading = productRows.some(p => p.imageUploadState === 'uploading');
   
-  const inputStyles = "block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-slate-700";
+  const inputStyles = "block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Bulk Add Products</h2>
-            <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
           <div className="p-6 space-y-6">
             {productRows.map((product, index) => (
-              <div key={index} className="bg-slate-50 dark:bg-slate-800/50 border dark:border-slate-700 p-4 rounded-md relative space-y-4">
+              <div key={index} className="bg-gray-50 dark:bg-gray-900/50 border dark:border-gray-700 p-4 rounded-md relative space-y-4">
                 <div className="absolute top-3 right-3 flex items-center gap-2">
-                    <button type="button" onClick={() => duplicateProductRow(index)} title="Duplicate Row" className="text-slate-400 hover:text-blue-500">
+                    <button type="button" onClick={() => duplicateProductRow(index)} title="Duplicate Row" className="text-gray-400 hover:text-blue-500">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                     </button>
-                    <button type="button" onClick={() => removeProductRow(index)} title="Remove Row" className="text-slate-400 hover:text-red-500 disabled:text-slate-300 dark:disabled:text-slate-500" disabled={productRows.length <= 1}>
+                    <button type="button" onClick={() => removeProductRow(index)} title="Remove Row" className="text-gray-400 hover:text-red-500 disabled:text-gray-300 dark:disabled:text-gray-500" disabled={productRows.length <= 1}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -252,13 +252,13 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                     </div>
                     <div>
                         {product.imageUploadState === 'idle' && (
-                            <label className="w-full flex items-center justify-center px-3 py-2 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <span className="text-sm text-slate-500 dark:text-slate-300">Upload Image</span>
+                            <label className="w-full flex items-center justify-center px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <span className="text-sm text-gray-500 dark:text-gray-300">Upload Image</span>
                                 <input type="file" accept="image/*" onChange={(e) => handleFileChange(index, e.target.files ? e.target.files[0] : null)} className="hidden"/>
                             </label>
                         )}
                         {product.imageUploadState === 'uploading' && (
-                            <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400 px-3 py-2 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-md">
+                            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
                                 <Spinner size="sm" />
                                 <span>Uploading...</span>
                             </div>
@@ -299,11 +299,11 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
             </button>
           </div>
            {error && <p className="text-sm text-red-500 text-center px-6 pb-4">{error}</p>}
-          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 border-t dark:border-slate-700 flex justify-end gap-3 sticky bottom-0">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm font-medium bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end gap-3 sticky bottom-0">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-500 text-sm font-medium bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500">
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting || isAnyImageUploading} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-slate-400 flex items-center gap-2">
+            <button type="submit" disabled={isSubmitting || isAnyImageUploading} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 flex items-center gap-2">
               {isSubmitting && <Spinner size="sm" />}
               {isSubmitting ? 'Adding...' : `Add ${productRows.length} Products`}
             </button>

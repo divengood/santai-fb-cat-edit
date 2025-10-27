@@ -71,37 +71,37 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
     }
   };
 
-  const inputStyles = "block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600";
+  const inputStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600";
 
   return (
-     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold">Edit Product Set</h2>
-            <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
             <div className="p-6 flex-grow overflow-y-auto space-y-6">
                 <div>
-                    <label htmlFor="setName" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Set Name</label>
+                    <label htmlFor="setName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Set Name</label>
                     <input
                         type="text"
                         id="setName"
                         value={setName}
                         onChange={(e) => setSetName(e.target.value)}
                         required
-                        className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
                     />
                 </div>
                 
                 <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Products in this Set ({productsInSet.length})</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Products in this Set ({productsInSet.length})</p>
                     {productsInSet.length > 0 ? (
-                        <ul className="mt-2 border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-48 overflow-y-auto">
+                        <ul className="mt-2 border border-gray-200 dark:border-gray-700 rounded-md divide-y divide-gray-200 dark:divide-gray-700 max-h-48 overflow-y-auto">
                             {productsInSet.map(product => (
-                                <li key={product.id} className="pl-3 pr-4 py-2 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                <li key={product.id} className="pl-3 pr-4 py-2 flex items-center justify-between text-sm hover:bg-gray-50 dark:hover:bg-gray-900/50">
                                     <div className="flex-1 w-0 truncate flex items-center gap-3">
                                         <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover flex-shrink-0"/>
                                         <span className="font-medium truncate">{product.name}</span>
@@ -113,29 +113,29 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
                             ))}
                         </ul>
                     ) : (
-                        <div className="mt-2 text-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md">
-                            <p className="text-sm text-slate-500">No products in this set.</p>
+                        <div className="mt-2 text-center py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md">
+                            <p className="text-sm text-gray-500">No products in this set.</p>
                         </div>
                     )}
                 </div>
 
                 <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Available Products to Add</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Available Products to Add</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
                         <input type="text" placeholder="Filter by name..." value={nameFilter} onChange={e => setNameFilter(e.target.value)} className={inputStyles} />
                         <input type="text" placeholder="Filter by brand..." value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className={inputStyles} />
                     </div>
                     {availableProducts.length > 0 ? (
-                        <ul className="border border-slate-200 dark:border-slate-700 rounded-md divide-y divide-slate-200 dark:divide-slate-700 max-h-48 overflow-y-auto">
+                        <ul className="border border-gray-200 dark:border-gray-700 rounded-md divide-y divide-gray-200 dark:divide-gray-700 max-h-48 overflow-y-auto">
                             {availableProducts.map(product => (
-                                <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                <li key={product.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50 dark:hover:bg-gray-900/50">
                                     <div className="w-0 flex-1 flex items-center">
                                         <input
                                             type="checkbox"
                                             id={`product-add-${product.id}`}
                                             checked={false} // This checkbox acts as an "Add" button
                                             onChange={() => toggleProductSelection(product.id)}
-                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                                         />
                                         <label htmlFor={`product-add-${product.id}`} className="ml-3 flex-1 w-0 truncate cursor-pointer flex items-center gap-3">
                                             <img src={product.imageUrl} alt={product.name} className="h-8 w-8 rounded-md object-cover"/>
@@ -146,16 +146,16 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ onClose, service, se
                             ))}
                         </ul>
                     ) : (
-                        <div className="mt-2 text-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md">
-                            <p className="text-sm text-slate-500">No other products to add.</p>
+                        <div className="mt-2 text-center py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md">
+                            <p className="text-sm text-gray-500">No other products to add.</p>
                         </div>
                     )}
                 </div>
             </div>
              {error && <p className="text-sm text-red-500 text-center px-6 pb-4">{error}</p>}
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 border-t dark:border-slate-700 flex justify-end gap-3">
-                <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-600 text-sm font-medium bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-slate-400 flex items-center gap-2">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end gap-3">
+                <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-500 text-sm font-medium bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 flex items-center gap-2">
                     {isSubmitting && <Spinner size="sm" />}
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>

@@ -118,23 +118,23 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans">
       <Header onDisconnect={handleDisconnect} theme={theme} toggleTheme={toggleTheme} />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-bold tracking-tight">Catalog Manager</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Bulk manage your Facebook products and sets.</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Bulk manage your Facebook products and sets.</p>
           </div>
 
-          <div className="border-b border-slate-200 dark:border-slate-700">
+          <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-6" aria-label="Tabs">
               <button
                 onClick={() => setView(View.PRODUCTS)}
                 className={`${
                   view === View.PRODUCTS
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
               >
                 Products
@@ -144,7 +144,7 @@ const App: React.FC = () => {
                 className={`${
                   view === View.SETS
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
               >
                 Product Sets
@@ -154,7 +154,7 @@ const App: React.FC = () => {
                 className={`${
                   view === View.LOGS
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
               >
                 History
