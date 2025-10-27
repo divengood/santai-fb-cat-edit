@@ -125,7 +125,6 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
-            left: '-100px',
             height: '50px',
             zIndex: 9999,
             pointerEvents: 'none',
