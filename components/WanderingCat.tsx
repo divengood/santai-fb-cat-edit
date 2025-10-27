@@ -6,6 +6,10 @@ interface ThoughtBubble {
   visible: boolean;
 }
 
+const WALKING_DOG_URL = "https://i.gifer.com/Xqg8.gif";
+const SITTING_DOG_URL = "https://i.imgur.com/sEV8V2j.png";
+
+
 export const WanderingCat: React.FC = () => {
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [isPaused, setIsPaused] = useState(false);
@@ -127,12 +131,12 @@ export const WanderingCat: React.FC = () => {
       `}</style>
       <img
           ref={catRef}
-          src="https://i.gifer.com/Xqg8.gif"
-          alt="Wandering dog"
+          src={isPaused ? SITTING_DOG_URL : WALKING_DOG_URL}
+          alt="Wandering pixel dog"
           style={{
             position: 'fixed',
             bottom: '10px',
-            height: '50px',
+            height: '80px',
             zIndex: 9999,
             pointerEvents: 'none',
             transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
