@@ -38,6 +38,15 @@ const App: React.FC = () => {
   });
   const [view, setView] = useState<View>(View.PRODUCTS);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('theme')) {
+        return localStorage.getItem('theme') as 'light' | 'dark';
+    }
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+    }
+    return 'light';
+  });
   
   const logger = useMemo(() => new Logger(setLogs), [setLogs]);
 
@@ -48,6 +57,19 @@ const App: React.FC = () => {
         localStorage.removeItem(CREDENTIALS_KEY);
     }
   }, [credentials]);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   useEffect(() => {
     if (credentials?.appId && typeof FB !== 'undefined' && FB.init) {
@@ -97,7 +119,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-      <Header onDisconnect={handleDisconnect} />
+      <Header onDisconnect={handleDisconnect} theme={theme} toggleTheme={toggleTheme} />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">

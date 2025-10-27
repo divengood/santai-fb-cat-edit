@@ -62,7 +62,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                 <label htmlFor="select-all-products" className="ml-3 text-sm font-medium">Select All ({products.length} shown)</label>
             </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 py-6">
             {products.map((product) => {
                 return (
                     <div
@@ -72,7 +72,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                     >
                         <div>
                             <div className="relative">
-                                <div className="absolute top-2 left-2 z-10">
+                                <div className="absolute top-1.5 left-1.5 z-10">
                                     <input
                                         type="checkbox"
                                         className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -84,21 +84,21 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                                 </div>
                             </div>
-                            <div className="p-3">
+                            <div className="p-2">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{product.brand}</p>
-                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-medium text-sm text-slate-900 dark:text-slate-100 hover:underline block truncate mt-0.5" title={product.name}>{product.name}</a>
-                                <div className="flex justify-between items-center mt-2">
-                                    <p className="text-base font-bold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
+                                <a href={product.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="font-medium text-xs text-slate-900 dark:text-slate-100 hover:underline block truncate mt-0.5" title={product.name}>{product.name}</a>
+                                <div className="flex justify-between items-center mt-1">
+                                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">Stock: {product.inventory}</p>
                                 </div>
-                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-200 dark:border-slate-700">
                                     <p className="text-xs text-slate-400 dark:text-slate-500">SKU: {product.retailer_id}</p>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onEdit(product);
                                         }}
-                                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                                        className="px-2 py-0.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                                     >
                                         Edit
                                     </button>
