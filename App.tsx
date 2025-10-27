@@ -6,6 +6,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { LogEntry } from './types';
 import { Logger } from './services/loggingService';
 import { LogViewer } from './components/LogViewer';
+import { WanderingCat } from './components/WanderingCat';
 
 // Make FB object available from the script loaded in index.html
 declare const FB: any;
@@ -53,6 +54,12 @@ const App: React.FC = () => {
     }
     return false;
   });
+   const [isCatVisible, setIsCatVisible] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('catVisible') === 'true';
+    }
+    return false;
+  });
   
   const logger = useMemo(() => new Logger(setLogs), [setLogs]);
 
@@ -79,6 +86,12 @@ const App: React.FC = () => {
     }
   }, [isMuted]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('catVisible', String(isCatVisible));
+    }
+  }, [isCatVisible]);
+
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
@@ -87,6 +100,10 @@ const App: React.FC = () => {
     setIsMuted(prev => !prev);
   };
   
+  const toggleCatVisibility = () => {
+    setIsCatVisible(prev => !prev);
+  };
+
   const playSound = (soundUrl: string) => {
     if (!isMuted) {
       const audio = new Audio(soundUrl);
@@ -142,7 +159,15 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans">
-      <Header onDisconnect={handleDisconnect} theme={theme} toggleTheme={toggleTheme} isMuted={isMuted} toggleMute={toggleMute} />
+      <Header 
+        onDisconnect={handleDisconnect} 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        isMuted={isMuted} 
+        toggleMute={toggleMute}
+        isCatVisible={isCatVisible}
+        toggleCatVisibility={toggleCatVisibility}
+      />
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
@@ -209,6 +234,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+      {isCatVisible && <WanderingCat />}
     </div>
   );
 };

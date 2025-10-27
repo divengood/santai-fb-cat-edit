@@ -67,6 +67,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                 return (
                     <div
                         key={product.id}
+                        data-product-card="true"
                         className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-all duration-200 cursor-pointer flex flex-col justify-between border ${selectedProducts.has(product.id) ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}
                         onClick={() => handleSelectProduct(product.id)}
                     >

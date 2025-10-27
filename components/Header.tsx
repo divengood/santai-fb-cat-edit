@@ -6,9 +6,17 @@ interface HeaderProps {
     toggleTheme: () => void;
     isMuted: boolean;
     toggleMute: () => void;
+    isCatVisible: boolean;
+    toggleCatVisibility: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onDisconnect, theme, toggleTheme, isMuted, toggleMute }) => {
+export const Header: React.FC<HeaderProps> = ({ onDisconnect, theme, toggleTheme, isMuted, toggleMute, isCatVisible, toggleCatVisibility }) => {
+  const catIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="h-6 w-6" fill="currentColor">
+      <path d="M256 128C256 92.65 227.3 64 192 64S128 92.65 128 128H112C112 76.65 156.7 32 208 32C259.3 32 304 76.65 304 128H288C288 92.65 259.3 64 224 64S192 92.65 192 128H256zM448 224C448 206.3 433.7 192 416 192H96C78.33 192 64 206.3 64 224C64 229.3 65.14 234.4 67.24 239.1C80.79 269.8 112.5 320 184 320C215.1 320 236.8 306.9 256 288.5C275.2 306.9 296 320 328 320C399.5 320 431.2 269.8 444.8 239.1C446.9 234.4 448 229.3 448 224zM184 256C179.6 256 176 260.4 176 264C176 268.4 179.6 272 184 272C188.4 272 192 268.4 192 264C192 260.4 188.4 256 184 256zM328 256C323.6 256 320 260.4 320 264C320 268.4 323.6 272 328 272C332.4 272 336 268.4 336 264C336 260.4 332.4 256 328 256zM480 352C497.7 352 512 366.3 512 384C512 401.7 497.7 416 480 416H32C14.33 416 0 401.7 0 384C0 366.3 14.33 352 32 352H480z"/>
+    </svg>
+  );
+
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,6 +28,13 @@ export const Header: React.FC<HeaderProps> = ({ onDisconnect, theme, toggleTheme
             <span className="font-bold text-xl text-gray-800 dark:text-gray-100">Catalog Manager</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+                onClick={toggleCatVisibility}
+                aria-label={isCatVisible ? 'Hide cat' : 'Show cat'}
+                className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 transition-colors"
+            >
+              {catIcon}
+            </button>
             <button
                 onClick={toggleMute}
                 aria-label={isMuted ? 'Unmute sounds' : 'Mute sounds'}
