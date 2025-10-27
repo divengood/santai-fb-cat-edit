@@ -129,6 +129,7 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
+            left: '-100px', // Explicitly set initial position to match animation start
             height: '50px',
             zIndex: 999,
             pointerEvents: 'none',
