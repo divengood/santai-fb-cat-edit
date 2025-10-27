@@ -7,7 +7,7 @@ interface ThoughtBubble {
 }
 
 const WALKING_DOG_URL = "https://i.gifer.com/Xqg8.gif";
-const SITTING_DOG_URL = "https://i.imgur.com/sEV8V2j.png";
+const SITTING_DOG_URL = "https://i.gifer.com/3P0Es.gif";
 
 
 export const WanderingCat: React.FC = () => {
@@ -136,7 +136,7 @@ export const WanderingCat: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: '10px',
-            height: '80px',
+            height: '120px',
             zIndex: 9999,
             pointerEvents: 'none',
             transform: direction === 'right' ? 'scaleX(1)' : 'scaleX(-1)',
