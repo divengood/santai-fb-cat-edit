@@ -37,9 +37,17 @@ class FacebookCatalogService {
     return errorBody?.error && (errorBody.error.type === 'OAuthException' || errorBody.error.code === 1);
   }
 
-  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object | string) {
+  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object | string, queryParams?: { [key: string]: any }) {
     const url = new URL(`${BASE_URL}${path}`);
     url.searchParams.append('access_token', this.apiToken);
+
+    if (queryParams) {
+        for (const key in queryParams) {
+            if (queryParams[key] !== undefined) {
+                url.searchParams.append(key, String(queryParams[key]));
+            }
+        }
+    }
 
     // Cache-busting for GET requests to ensure fresh data
     if (method === 'GET') {
@@ -212,7 +220,7 @@ class FacebookCatalogService {
 
         return {
             method: 'POST',
-            relative_url: `${this.catalogId}/products`,
+            relative_url: `${this.catalogId}/products?scrape=true`,
             body: params.toString(),
         };
      });
@@ -338,8 +346,10 @@ class FacebookCatalogService {
         for (const key in payload) {
             params.append(key, String(payload[key]));
         }
+        
+        const queryParams = { scrape: 'true' };
 
-        const response = await this.apiRequest(`/${productId}`, 'POST', params.toString());
+        const response = await this.apiRequest(`/${productId}`, 'POST', params.toString(), queryParams);
         this.logger?.success(`Successfully updated product ID: ${productId}.`);
         return response;
     } catch (error) {
