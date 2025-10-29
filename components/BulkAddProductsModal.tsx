@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NewProduct, Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
-import { uploadImage } from '../services/imageUploadService';
+import { uploadImage, uploadVideo } from '../services/imageUploadService';
 import { Logger } from '../services/loggingService';
 
 interface BulkAddProductsModalProps {
@@ -23,11 +23,18 @@ interface ProductRowState extends Omit<NewProduct, 'retailer_id'> {
   imageUploadError?: string;
   localImagePreview?: string;
   fileName?: string;
+
+  // UI state for video upload
+  videoUploadState: 'idle' | 'uploading' | 'success' | 'error';
+  videoUploadError?: string;
+  videoFileName?: string;
 }
 
 const emptyProductRow: ProductRowState = { 
   name: '', description: '', brand: '', link: '', price: 0, currency: 'USD', imageUrl: '', inventory: 1,
-  imageUploadState: 'idle' 
+  imageUploadState: 'idle',
+  videoUploadState: 'idle',
+  videoUrl: '',
 };
 
 export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onClose, service, onProductsAdded, existingProducts, cloudinaryCloudName, cloudinaryUploadPreset, logger }) => {
@@ -35,7 +42,7 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleProductChange = (index: number, field: keyof Omit<NewProduct, 'retailer_id'>, value: string | number) => {
+  const handleProductChange = (index: number, field: keyof Omit<NewProduct, 'retailer_id' | 'videoUrl'>, value: string | number) => {
     const newProducts = [...productRows];
     (newProducts[index] as any)[field] = value;
     setProductRows(newProducts);
@@ -81,6 +88,49 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
             if(finalRows[index]){
                 finalRows[index].imageUploadState = 'error';
                 finalRows[index].imageUploadError = errorMessage;
+            }
+            return finalRows;
+        });
+    }
+  };
+
+  const handleVideoFileChange = async (index: number, file: File | null) => {
+    if (!file) {
+        setProductRows(currentRows => {
+            const finalRows = [...currentRows];
+            if(finalRows[index]){
+                finalRows[index].videoUploadState = 'idle';
+                finalRows[index].videoUploadError = undefined;
+                finalRows[index].videoFileName = undefined;
+                finalRows[index].videoUrl = '';
+            }
+            return finalRows;
+        });
+        return;
+    }
+
+    const newRows = [...productRows];
+    newRows[index].videoUploadState = 'uploading';
+    newRows[index].videoFileName = file.name;
+    setProductRows(newRows);
+
+    try {
+        const videoUrl = await uploadVideo(file, cloudinaryCloudName, cloudinaryUploadPreset, logger);
+        setProductRows(currentRows => {
+            const finalRows = [...currentRows];
+            if (finalRows[index]) {
+                finalRows[index].videoUrl = videoUrl;
+                finalRows[index].videoUploadState = 'success';
+            }
+            return finalRows;
+        });
+    } catch(err) {
+        const errorMessage = err instanceof Error ? err.message : "Upload failed";
+        setProductRows(currentRows => {
+            const finalRows = [...currentRows];
+            if(finalRows[index]){
+                finalRows[index].videoUploadState = 'error';
+                finalRows[index].videoUploadError = errorMessage;
             }
             return finalRows;
         });
@@ -149,6 +199,11 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
             fileName: undefined,
             localImagePreview: undefined,
             imageUploadError: undefined,
+            // Reset video state
+            videoUploadState: 'idle',
+            videoUrl: '',
+            videoFileName: undefined,
+            videoUploadError: undefined,
         };
         newCopies.push(newCopy);
     }
@@ -173,7 +228,12 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
         
         existingRetailerIds.add(newRetailerId); // Ensure uniqueness within the batch
 
-        const { imageUploadState, imageUploadError, localImagePreview, fileName, ...productData } = p_row;
+        const { 
+            imageUploadState, imageUploadError, localImagePreview, fileName, 
+            videoUploadState, videoUploadError, videoFileName, 
+            ...productData 
+        } = p_row;
+        
         productsToSubmit.push({
             ...productData,
             retailer_id: newRetailerId,
@@ -186,9 +246,9 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
       return;
     }
     
-    const isUploading = productRows.some(p => p.imageUploadState === 'uploading');
+    const isUploading = productRows.some(p => p.imageUploadState === 'uploading' || p.videoUploadState === 'uploading');
     if(isUploading){
-        setError("Please wait for all images to finish uploading.");
+        setError("Please wait for all images and videos to finish uploading.");
         return;
     }
     
@@ -205,7 +265,7 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
     }
   };
   
-  const isAnyImageUploading = productRows.some(p => p.imageUploadState === 'uploading');
+  const isAnyImageUploading = productRows.some(p => p.imageUploadState === 'uploading' || p.videoUploadState === 'uploading');
   
   const inputStyles = "block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700";
 
@@ -242,17 +302,17 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                  <input type="url" placeholder="Product Link (URL)" value={product.link} onChange={(e) => handleProductChange(index, 'link', e.target.value)} required className={inputStyles} />
                 <textarea placeholder="Description" value={product.description} onChange={(e) => handleProductChange(index, 'description', e.target.value)} required className={inputStyles} rows={2}/>
                 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                        <input type="number" step="0.01" min="0.01" placeholder="Price" value={product.price} onChange={(e) => handleProductChange(index, 'price', parseFloat(e.target.value) || 0)} required className={inputStyles} />
-                        <select value={product.currency} onChange={(e) => handleProductChange(index, 'currency', e.target.value)} className={inputStyles}>
-                            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                         <input type="number" min="0" placeholder="Quantity" value={product.inventory} onChange={(e) => handleProductChange(index, 'inventory', parseInt(e.target.value, 10) || 0)} required className={inputStyles} />
-                    </div>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="number" step="0.01" min="0.01" placeholder="Price" value={product.price} onChange={(e) => handleProductChange(index, 'price', parseFloat(e.target.value) || 0)} required className={inputStyles} />
+                    <select value={product.currency} onChange={(e) => handleProductChange(index, 'currency', e.target.value)} className={inputStyles}>
+                        {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input type="number" min="0" placeholder="Quantity" value={product.inventory} onChange={(e) => handleProductChange(index, 'inventory', parseInt(e.target.value, 10) || 0)} required className={inputStyles} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         {product.imageUploadState === 'idle' && (
-                            <label className="w-full flex items-center justify-center px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <label className="w-full h-full flex items-center justify-center px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <span className="text-sm text-gray-500 dark:text-gray-300">Upload Image</span>
                                 <input type="file" accept="image/*" onChange={(e) => handleFileChange(index, e.target.files ? e.target.files[0] : null)} className="hidden"/>
                             </label>
@@ -291,7 +351,36 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                             </div>
                         )}
                     </div>
-                 </div>
+                     <div>
+                        {product.videoUploadState === 'idle' && (
+                            <label className="w-full h-full flex items-center justify-center px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <span className="text-sm text-gray-500 dark:text-gray-300">Upload Video (Optional)</span>
+                                <input type="file" accept="video/*" onChange={(e) => handleVideoFileChange(index, e.target.files ? e.target.files[0] : null)} className="hidden"/>
+                            </label>
+                        )}
+                        {product.videoUploadState === 'uploading' && (
+                            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
+                                <Spinner size="sm" />
+                                <span>Uploading Video...</span>
+                            </div>
+                        )}
+                        {product.videoUploadState === 'success' && (
+                           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                <span className="truncate">{product.videoFileName}</span>
+                           </div>
+                        )}
+                        {product.videoUploadState === 'error' && (
+                            <div className="text-sm text-red-500">
+                                <p className="truncate">Error: {product.videoUploadError}</p>
+                                <label className="text-blue-500 hover:underline cursor-pointer">
+                                    Try again
+                                    <input type="file" accept="video/*" onChange={(e) => handleVideoFileChange(index, e.target.files ? e.target.files[0] : null)} className="hidden"/>
+                                </label>
+                            </div>
+                        )}
+                    </div>
+                </div>
               </div>
             ))}
             <button type="button" onClick={addProductRow} className="text-blue-600 dark:text-blue-400 font-medium text-sm hover:text-blue-500">

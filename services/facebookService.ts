@@ -129,7 +129,7 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,video_url&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
@@ -172,6 +172,7 @@ class FacebookCatalogService {
             currency: p.currency,
             imageUrl: p.image_url,
             inventory: p.inventory || 0,
+            videoUrl: p.video_url,
         }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
@@ -199,6 +200,10 @@ class FacebookCatalogService {
             availability: p.inventory > 0 ? 'in stock' : 'out of stock',
             inventory: String(p.inventory),
         });
+        
+        if (p.videoUrl) {
+            params.append('video_url', p.videoUrl);
+        }
 
         return {
             method: 'POST',
@@ -312,6 +317,7 @@ class FacebookCatalogService {
     if (updates.price !== undefined) payload.price = Math.round(updates.price * 100);
     if (updates.currency !== undefined) payload.currency = updates.currency;
     if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+    if (updates.videoUrl !== undefined) payload.video_url = updates.videoUrl;
     if (updates.inventory !== undefined) {
       payload.inventory = updates.inventory;
       payload.availability = updates.inventory > 0 ? 'in stock' : 'out of stock';

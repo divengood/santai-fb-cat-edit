@@ -81,6 +81,13 @@ export const ProductList: React.FC<ProductListProps> = ({ products, selectedProd
                                         readOnly
                                     />
                                 </div>
+                                {product.videoUrl && (
+                                    <div className="absolute top-2 right-2 z-10 bg-black/50 p-1 rounded-full text-white" title="Video available">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm14.553 1.106A1 1 0 0016 8v4a1 1 0 00.553.894l2 1A1 1 0 0020 13V7a1 1 0 00-1.447-.894l-2-1z" />
+                                        </svg>
+                                    </div>
+                                )}
                                 <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
                                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                                 </div>
