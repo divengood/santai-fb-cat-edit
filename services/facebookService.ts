@@ -37,7 +37,7 @@ class FacebookCatalogService {
     return errorBody?.error && (errorBody.error.type === 'OAuthException' || errorBody.error.code === 1);
   }
 
-  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object) {
+  private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object | string) {
     const url = new URL(`${BASE_URL}${path}`);
     url.searchParams.append('access_token', this.apiToken);
 
@@ -51,8 +51,13 @@ class FacebookCatalogService {
     };
 
     if (method !== 'GET' && body) {
-        options.headers = {'Content-Type': 'application/json'};
-        options.body = JSON.stringify(body);
+        if (typeof body === 'string') {
+            options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            options.body = body;
+        } else {
+            options.headers = {'Content-Type': 'application/json'};
+            options.body = JSON.stringify(body);
+        }
     }
     
     const response = await fetch(url.toString(), options);
@@ -309,7 +314,6 @@ class FacebookCatalogService {
   async updateProduct(productId: string, updates: Partial<NewProduct>): Promise<any> {
     this.logger?.info(`Updating product ID: ${productId}...`);
     
-    // Transform data for the API
     const payload: { [key: string]: any } = {};
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.description !== undefined) payload.description = updates.description;
@@ -330,7 +334,12 @@ class FacebookCatalogService {
     }
 
     try {
-        const response = await this.apiRequest(`/${productId}`, 'POST', payload);
+        const params = new URLSearchParams();
+        for (const key in payload) {
+            params.append(key, String(payload[key]));
+        }
+
+        const response = await this.apiRequest(`/${productId}`, 'POST', params.toString());
         this.logger?.success(`Successfully updated product ID: ${productId}.`);
         return response;
     } catch (error) {
