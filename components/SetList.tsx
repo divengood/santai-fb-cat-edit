@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { ProductSet, Product } from '../types';
 
 interface SetListProps {
@@ -10,6 +11,7 @@ interface SetListProps {
 }
 
 export const SetList: React.FC<SetListProps> = ({ sets, products, selectedSets, setSelectedSets, onEdit }) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleSelectSet = (setId: string) => {
     setSelectedSets(prev => {
@@ -29,6 +31,16 @@ export const SetList: React.FC<SetListProps> = ({ sets, products, selectedSets, 
     } else {
       setSelectedSets(new Set());
     }
+  };
+
+  const copyToClipboard = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(id).then(() => {
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
   };
 
   const isAllSelected = sets.length > 0 && selectedSets.size === sets.length;
@@ -65,11 +77,29 @@ export const SetList: React.FC<SetListProps> = ({ sets, products, selectedSets, 
                 onChange={() => handleSelectSet(set.id)}
               />
               <div className="ml-4 flex-1">
-                <div className="flex justify-between items-center">
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{set.name}</p>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-none">{set.name}</p>
+                        <div 
+                            onClick={(e) => copyToClipboard(e, set.id)}
+                            className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors group"
+                            title="Click to copy ID"
+                        >
+                            <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 select-all">
+                                ID: {set.id}
+                            </span>
+                            {copiedId === set.id ? (
+                                <span className="text-[10px] text-green-600 dark:text-green-400 font-bold animate-pulse">Copied!</span>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400 group-hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                            )}
+                        </div>
+                    </div>
                     <button onClick={() => onEdit(set)} className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">Edit</button>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{set.productIds.length} products in this set.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">{set.productIds.length} products in this set.</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {set.productIds.slice(0, 5).map(pid => {
                         const product = productsById.get(pid);
