@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   retailer_id: string;
@@ -7,7 +8,8 @@ export interface Product {
   link: string;
   price: number;
   currency: string;
-  imageUrl: string;
+  imageUrl: string; // Main image
+  additionalImageUrls?: string[]; // Secondary images
   inventory: number;
   videoUrl?: string;
 }

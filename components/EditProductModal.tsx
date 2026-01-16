@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Product, NewProduct } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
-import { uploadImage, uploadVideo } from '../services/imageUploadService';
+import { uploadVideo } from '../services/imageUploadService';
 import { Logger } from '../services/loggingService';
+import { ImageDropzone } from './ImageDropzone';
 
 interface EditProductModalProps {
   onClose: () => void;
@@ -17,7 +19,16 @@ interface EditProductModalProps {
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'RUB'];
 
-type EditableProductFields = Omit<NewProduct, 'retailer_id'>;
+type EditableProductFields = Omit<NewProduct, 'retailer_id' | 'imageUrl' | 'additionalImageUrls'>;
+
+interface UploadedImage {
+    url: string;
+    isMain: boolean;
+    localPreview: string;
+    id: string;
+    status: 'uploading' | 'success' | 'error';
+    error?: string;
+}
 
 export const EditProductModal: React.FC<EditProductModalProps> = ({
   onClose,
@@ -35,15 +46,11 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
     link: '',
     price: 0,
     currency: 'USD',
-    imageUrl: '',
     inventory: 0,
     videoUrl: '',
   });
 
-  const [imageUploadState, setImageUploadState] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  const [imageUploadError, setImageUploadError] = useState('');
-  const [localImagePreview, setLocalImagePreview] = useState('');
-  
+  const [images, setImages] = useState<UploadedImage[]>([]);
   const [videoUploadState, setVideoUploadState] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [videoUploadError, setVideoUploadError] = useState('');
 
@@ -59,12 +66,32 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
         link: product.link,
         price: product.price,
         currency: product.currency,
-        imageUrl: product.imageUrl,
         inventory: product.inventory,
         videoUrl: product.videoUrl || '',
       });
-      setLocalImagePreview(product.imageUrl);
-      setImageUploadState('idle');
+
+      const initialImages: UploadedImage[] = [];
+      if (product.imageUrl) {
+          initialImages.push({
+              id: 'main-' + Math.random().toString(36).substr(2, 9),
+              url: product.imageUrl,
+              isMain: true,
+              localPreview: product.imageUrl,
+              status: 'success'
+          });
+      }
+      if (product.additionalImageUrls) {
+          product.additionalImageUrls.forEach(url => {
+            initialImages.push({
+                id: 'add-' + Math.random().toString(36).substr(2, 9),
+                url,
+                isMain: false,
+                localPreview: url,
+                status: 'success'
+            });
+          });
+      }
+      setImages(initialImages);
       setVideoUploadState('idle');
     }
   }, [product]);
@@ -72,31 +99,15 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
   const handleChange = (field: keyof EditableProductFields, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-  
-  const handleFileChange = async (file: File | null) => {
-    if (!file) return;
-
-    setImageUploadState('uploading');
-    setLocalImagePreview(URL.createObjectURL(file));
-    
-    try {
-        const imageUrl = await uploadImage(file, cloudinaryCloudName, cloudinaryUploadPreset, logger);
-        setFormData(prev => ({ ...prev, imageUrl }));
-        setImageUploadState('success');
-    } catch(err) {
-        const errorMessage = err instanceof Error ? err.message : "Upload failed";
-        setImageUploadState('error');
-        setImageUploadError(errorMessage);
-        // revert preview on error
-        setLocalImagePreview(product.imageUrl); 
-    }
-  };
 
   const handleVideoFileChange = async (file: File | null) => {
-    if (!file) return;
+    if (!file) {
+        setFormData(prev => ({ ...prev, videoUrl: '' }));
+        setVideoUploadState('idle');
+        return;
+    }
 
     setVideoUploadState('uploading');
-    
     try {
         const videoUrl = await uploadVideo(file, cloudinaryCloudName, cloudinaryUploadPreset, logger);
         setFormData(prev => ({ ...prev, videoUrl }));
@@ -112,19 +123,26 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
     e.preventDefault();
     setError('');
 
-    if (!formData.name || !formData.link || !formData.imageUrl || formData.price <= 0 || formData.inventory < 0) {
-      setError("Name, Link, and Image are required. Price must be > 0 and Quantity must be >= 0.");
+    const mainImage = images.find(img => img.isMain && img.status === 'success')?.url;
+    const additionalImages = images.filter(img => !img.isMain && img.status === 'success').map(img => img.url);
+
+    if (!formData.name || !formData.link || !mainImage || formData.price <= 0 || formData.inventory < 0) {
+      setError("Name, Link, and Main Image are required. Price must be > 0 and Quantity must be >= 0.");
       return;
     }
     
-    if (imageUploadState === 'uploading' || videoUploadState === 'uploading') {
+    if (images.some(img => img.status === 'uploading') || videoUploadState === 'uploading') {
         setError("Please wait for all media to finish uploading.");
         return;
     }
     
     setIsSubmitting(true);
     try {
-      await service.updateProduct(product.id, formData);
+      await service.updateProduct(product.id, {
+        ...formData,
+        imageUrl: mainImage,
+        additionalImageUrls: additionalImages
+      });
       onProductUpdated();
       onClose();
     } catch (err) {
@@ -139,7 +157,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Edit Product</h2>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -147,7 +165,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Name</label>
@@ -182,36 +200,33 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
                 <input type="number" min="0" value={formData.inventory} onChange={(e) => handleChange('inventory', parseInt(e.target.value, 10) || 0)} required className={inputStyles} />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Image</label>
-              <div className="mt-2 flex items-center gap-4">
-                <img src={localImagePreview} alt="Product" className="h-20 w-20 object-cover rounded-md bg-gray-100 dark:bg-gray-700" />
-                <div>
-                  <label className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer">
-                    <span>Change Image</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)} className="sr-only" />
-                  </label>
-                  {imageUploadState === 'uploading' && <div className="text-sm text-gray-500 mt-2 flex items-center gap-2"><Spinner size="sm"/> Uploading...</div>}
-                  {imageUploadState === 'success' && <div className="text-sm text-green-600 mt-2">Upload complete.</div>}
-                  {imageUploadState === 'error' && <div className="text-sm text-red-500 mt-2">Error: {imageUploadError}</div>}
-                </div>
-              </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Images</label>
+                <ImageDropzone 
+                    images={images}
+                    onImagesChange={setImages}
+                    cloudinaryCloudName={cloudinaryCloudName}
+                    cloudinaryUploadPreset={cloudinaryUploadPreset}
+                    logger={logger}
+                />
             </div>
-             <div>
+
+             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Video</label>
-              <div className="mt-2 flex items-center gap-4">
-                {formData.videoUrl ? (
-                    <video key={formData.videoUrl} controls className="h-20 w-20 object-cover rounded-md bg-gray-100 dark:bg-gray-700">
-                        <source src={formData.videoUrl} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                ) : (
-                    <div className="h-20 w-20 flex items-center justify-center text-center text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md">
-                        <span>No Video</span>
+              <div className="flex flex-col gap-3">
+                {formData.videoUrl && (
+                    <div className="relative w-32 h-32">
+                        <video key={formData.videoUrl} controls className="w-full h-full object-cover rounded-md bg-gray-100 dark:bg-gray-700">
+                            <source src={formData.videoUrl} type="video/mp4" />
+                        </video>
+                        <button type="button" onClick={() => handleVideoFileChange(null)} className="absolute -top-2 -right-2 bg-red-600 text-white p-1 rounded-full shadow hover:bg-red-700">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                     </div>
                 )}
                 <div>
-                  <label className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer">
+                  <label className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer inline-block">
                     <span>{formData.videoUrl ? 'Change Video' : 'Add Video'}</span>
                     <input type="file" accept="video/*" onChange={(e) => handleVideoFileChange(e.target.files ? e.target.files[0] : null)} className="sr-only" />
                   </label>
@@ -227,7 +242,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-500 text-sm font-medium bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500">
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting || imageUploadState === 'uploading' || videoUploadState === 'uploading'} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 flex items-center gap-2">
+            <button type="submit" disabled={isSubmitting || images.some(img => img.status === 'uploading') || videoUploadState === 'uploading'} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 flex items-center gap-2">
               {isSubmitting && <Spinner size="sm" />}
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>

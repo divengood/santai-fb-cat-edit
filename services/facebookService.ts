@@ -1,3 +1,4 @@
+
 import { Product, ProductSet, NewProduct } from '../types';
 import { Logger } from './loggingService';
 
@@ -49,7 +50,6 @@ class FacebookCatalogService {
         }
     }
 
-    // Cache-busting for GET requests to ensure fresh data
     if (method === 'GET') {
       url.searchParams.append('_', Date.now().toString());
     }
@@ -80,7 +80,6 @@ class FacebookCatalogService {
         }
     }
 
-    // Handle error responses
     let errorMessage = `Request failed with status ${response.status}`;
     if (responseText) {
         try {
@@ -114,7 +113,7 @@ class FacebookCatalogService {
 
     if (response.ok) {
         try {
-            return responseText ? JSON.parse(responseText) : []; // Batch should return an array
+            return responseText ? JSON.parse(responseText) : []; 
         } catch (e) {
             console.error("Failed to parse successful batch response JSON", responseText, e);
             throw new Error("Received a malformed success response from the server for a batch request.");
@@ -142,11 +141,10 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,inventory,video_url&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,additional_image_urls,inventory,video_url&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
-            // Add cache buster to each paginated request
             const urlToFetch = `${nextUrl}&_=${Date.now()}`;
             const response = await fetch(urlToFetch);
 
@@ -166,7 +164,6 @@ class FacebookCatalogService {
                 allProductsData = allProductsData.concat(responseData.data);
             }
 
-            // Check for the next page link
             if (responseData.paging && responseData.paging.next) {
                 nextUrl = responseData.paging.next;
             } else {
@@ -184,6 +181,7 @@ class FacebookCatalogService {
             price: parseFloat(p.price) / 100,
             currency: p.currency,
             imageUrl: p.image_url,
+            additionalImageUrls: p.additional_image_urls || [],
             inventory: p.inventory || 0,
             videoUrl: p.video_url,
         }));
@@ -214,6 +212,10 @@ class FacebookCatalogService {
             inventory: String(p.inventory),
         });
         
+        if (p.additionalImageUrls && p.additionalImageUrls.length > 0) {
+            params.append('additional_image_urls', JSON.stringify(p.additionalImageUrls));
+        }
+
         if (p.videoUrl) {
             params.append('video_url', p.videoUrl);
         }
@@ -330,6 +332,7 @@ class FacebookCatalogService {
     if (updates.price !== undefined) payload.price = Math.round(updates.price * 100);
     if (updates.currency !== undefined) payload.currency = updates.currency;
     if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+    if (updates.additionalImageUrls !== undefined) payload.additional_image_urls = JSON.stringify(updates.additionalImageUrls);
     if (updates.videoUrl !== undefined) payload.video_url = updates.videoUrl;
     if (updates.inventory !== undefined) {
       payload.inventory = updates.inventory;
@@ -362,7 +365,6 @@ class FacebookCatalogService {
     this.logger?.info("Fetching product sets...");
     const path = `/${this.catalogId}/product_sets?fields=id,name`;
     try {
-        // Step 1: Fetch all sets with their IDs and names
         const setsResponse = await this.apiRequest(path);
         const basicSets: {id: string, name: string}[] = setsResponse.data || [];
 
@@ -371,16 +373,14 @@ class FacebookCatalogService {
             return [];
         }
 
-        // Step 2: Create a batch request to get products for each set
         const batchRequests: BatchRequest[] = basicSets.map(set => ({
             method: 'GET',
-            relative_url: `${set.id}/products?fields=id&limit=5000` // Fetch up to 5000 product IDs
+            relative_url: `${set.id}/products?fields=id&limit=5000` 
         }));
 
         this.logger?.info(`Fetching products for ${basicSets.length} set(s)...`);
         const batchResponses = await this.batchRequest(batchRequests);
 
-        // Step 3: Combine the results
         const setsWithProducts: ProductSet[] = basicSets.map((set, index) => {
             const response = batchResponses[index];
             let productIds: string[] = [];
@@ -491,8 +491,6 @@ class FacebookCatalogService {
     try {
         const payload: { name: string; filter: object } = {
             name,
-            // Use a filter that matches nothing if no products are selected,
-            // or a filter for the selected products.
             filter: {
                 product_item_id: { is_any: productIds.length > 0 ? productIds : [] }
             }
