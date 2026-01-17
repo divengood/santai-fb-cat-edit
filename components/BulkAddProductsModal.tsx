@@ -211,9 +211,17 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
         });
     }
 
-    const hasInvalidProducts = productsToSubmit.some(p => !p.name || !p.link || !p.imageUrl || p.price <= 0 || p.inventory < 0);
+    // Harden validation for price and inventory
+    const hasInvalidProducts = productsToSubmit.some(p => 
+        !p.name || 
+        !p.link || 
+        !p.imageUrl || 
+        Number.isNaN(p.price) || p.price <= 0 || 
+        Number.isNaN(p.inventory) || p.inventory < 0
+    );
+
     if(hasInvalidProducts){
-      setError("Name, Link, and Main Image are required. Price must be > 0 and Quantity must be >= 0.");
+      setError("Name, Link, and Main Image are required. Price must be a number > 0 and Quantity must be a number >= 0.");
       return;
     }
     
@@ -280,11 +288,11 @@ export const BulkAddProductsModal: React.FC<BulkAddProductsModalProps> = ({ onCl
                 <textarea placeholder="Description" value={product.description} onChange={(e) => handleProductChange(index, 'description', e.target.value)} required className={inputStyles} rows={2}/>
                 
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="number" step="0.01" min="0.01" placeholder="Price" value={product.price} onChange={(e) => handleProductChange(index, 'price', parseFloat(e.target.value) || 0)} required className={inputStyles} />
+                    <input type="number" step="0.01" min="0.01" placeholder="Price" value={product.price} onChange={(e) => handleProductChange(index, 'price', e.target.valueAsNumber || 0)} required className={inputStyles} />
                     <select value={product.currency} onChange={(e) => handleProductChange(index, 'currency', e.target.value)} className={inputStyles}>
                         {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    <input type="number" min="0" placeholder="Quantity" value={product.inventory} onChange={(e) => handleProductChange(index, 'inventory', parseInt(e.target.value, 10) || 0)} required className={inputStyles} />
+                    <input type="number" min="0" placeholder="Quantity" value={product.inventory} onChange={(e) => handleProductChange(index, 'inventory', e.target.valueAsNumber || 0)} required className={inputStyles} />
                 </div>
 
                 <div className="space-y-4">

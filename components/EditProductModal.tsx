@@ -126,8 +126,15 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
     const mainImage = images.find(img => img.isMain && img.status === 'success')?.url;
     const additionalImages = images.filter(img => !img.isMain && img.status === 'success').map(img => img.url);
 
-    if (!formData.name || !formData.link || !mainImage || formData.price <= 0 || formData.inventory < 0) {
-      setError("Name, Link, and Main Image are required. Price must be > 0 and Quantity must be >= 0.");
+    // Hardened validation
+    if (
+        !formData.name || 
+        !formData.link || 
+        !mainImage || 
+        Number.isNaN(formData.price) || formData.price <= 0 || 
+        Number.isNaN(formData.inventory) || formData.inventory < 0
+    ) {
+      setError("Name, Link, and Main Image are required. Price must be a number > 0 and Quantity must be a number >= 0.");
       return;
     }
     
@@ -187,7 +194,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Price</label>
-                <input type="number" step="0.01" min="0.01" value={formData.price} onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)} required className={inputStyles} />
+                <input type="number" step="0.01" min="0.01" value={formData.price} onChange={(e) => handleChange('price', e.target.valueAsNumber || 0)} required className={inputStyles} />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
@@ -197,7 +204,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
-                <input type="number" min="0" value={formData.inventory} onChange={(e) => handleChange('inventory', parseInt(e.target.value, 10) || 0)} required className={inputStyles} />
+                <input type="number" min="0" value={formData.inventory} onChange={(e) => handleChange('inventory', e.target.valueAsNumber || 0)} required className={inputStyles} />
               </div>
             </div>
 

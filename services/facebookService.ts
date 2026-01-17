@@ -178,7 +178,7 @@ class FacebookCatalogService {
             description: p.description,
             brand: p.brand,
             link: p.url,
-            price: parseFloat(p.price) / 100,
+            price: (parseFloat(p.price) || 0) / 100,
             currency: p.currency,
             imageUrl: p.image_url,
             additionalImageUrls: p.additional_image_urls || [],
@@ -199,17 +199,21 @@ class FacebookCatalogService {
      this.logger?.info(`Attempting to add ${newProducts.length} product(s)...`);
      
      const requests: BatchRequest[] = newProducts.map(p => {
+        // Safe price conversion: Ensure it's a number and fallback to 0 if NaN
+        const priceInCents = Math.round((Number(p.price) || 0) * 100);
+        const inventory = Number(p.inventory) || 0;
+
         const params = new URLSearchParams({
             retailer_id: p.retailer_id,
             name: p.name,
             description: p.description,
             brand: p.brand,
             url: p.link,
-            price: String(Math.round(p.price * 100)),
+            price: String(priceInCents),
             currency: p.currency,
             image_url: p.imageUrl,
-            availability: p.inventory > 0 ? 'in stock' : 'out of stock',
-            inventory: String(p.inventory),
+            availability: inventory > 0 ? 'in stock' : 'out of stock',
+            inventory: String(inventory),
         });
         
         if (p.additionalImageUrls && p.additionalImageUrls.length > 0) {
@@ -329,14 +333,21 @@ class FacebookCatalogService {
     if (updates.description !== undefined) payload.description = updates.description;
     if (updates.brand !== undefined) payload.brand = updates.brand;
     if (updates.link !== undefined) payload.url = updates.link;
-    if (updates.price !== undefined) payload.price = Math.round(updates.price * 100);
+    
+    if (updates.price !== undefined) {
+      const priceVal = Number(updates.price);
+      payload.price = Number.isNaN(priceVal) ? 0 : Math.round(priceVal * 100);
+    }
+    
     if (updates.currency !== undefined) payload.currency = updates.currency;
     if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
     if (updates.additionalImageUrls !== undefined) payload.additional_image_urls = JSON.stringify(updates.additionalImageUrls);
     if (updates.videoUrl !== undefined) payload.video_url = updates.videoUrl;
+    
     if (updates.inventory !== undefined) {
-      payload.inventory = updates.inventory;
-      payload.availability = updates.inventory > 0 ? 'in stock' : 'out of stock';
+      const invVal = Number(updates.inventory);
+      payload.inventory = Number.isNaN(invVal) ? 0 : invVal;
+      payload.availability = payload.inventory > 0 ? 'in stock' : 'out of stock';
     }
     
     if (Object.keys(payload).length === 0) {
