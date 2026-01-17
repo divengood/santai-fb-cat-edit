@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
@@ -40,6 +41,24 @@ export const CreateSetModal: React.FC<CreateSetModalProps> = ({ onClose, service
         return newSelection;
     });
   };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedProductIds(prev => {
+        const newSelection = new Set(prev);
+        filteredProducts.forEach(p => newSelection.add(p.id));
+        return newSelection;
+    });
+  };
+
+  const handleDeselectAllFiltered = () => {
+    setSelectedProductIds(prev => {
+        const newSelection = new Set(prev);
+        filteredProducts.forEach(p => newSelection.delete(p.id));
+        return newSelection;
+    });
+  };
+
+  const areAllFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedProductIds.has(p.id));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +107,18 @@ export const CreateSetModal: React.FC<CreateSetModalProps> = ({ onClose, service
                     />
                 </div>
                  <div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Products ({selectedProductIds.size})</p>
+                    <div className="flex justify-between items-center mb-1">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Выберите товары ({selectedProductIds.size})</p>
+                        {filteredProducts.length > 0 && (
+                            <button 
+                                type="button" 
+                                onClick={areAllFilteredSelected ? handleDeselectAllFiltered : handleSelectAllFiltered}
+                                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase"
+                            >
+                                {areAllFilteredSelected ? 'Снять выделение' : `Выбрать все (${filteredProducts.length})`}
+                            </button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
                         <input type="text" placeholder="Filter by name..." value={nameFilter} onChange={e => setNameFilter(e.target.value)} className={inputStyles} />
                         <input type="text" placeholder="Filter by brand..." value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className={inputStyles} />

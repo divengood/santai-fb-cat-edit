@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
@@ -57,6 +58,20 @@ const SetCreator: React.FC<{
         onUpdate({ ...state, selectedProductIds: newSelectedIds });
     };
 
+    const handleSelectAllFiltered = () => {
+        const newSelectedIds = new Set(state.selectedProductIds);
+        filteredProducts.forEach(p => newSelectedIds.add(p.id));
+        onUpdate({ ...state, selectedProductIds: newSelectedIds });
+    };
+
+    const handleDeselectAllFiltered = () => {
+        const newSelectedIds = new Set(state.selectedProductIds);
+        filteredProducts.forEach(p => newSelectedIds.delete(p.id));
+        onUpdate({ ...state, selectedProductIds: newSelectedIds });
+    };
+
+    const areAllFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => state.selectedProductIds.has(p.id));
+
     const inputStyles = "block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600";
 
     return (
@@ -84,10 +99,21 @@ const SetCreator: React.FC<{
             />
 
             <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Products ({state.selectedProductIds.size})</p>
+                <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Выберите товары ({state.selectedProductIds.size})</p>
+                    {filteredProducts.length > 0 && (
+                        <button 
+                            type="button" 
+                            onClick={areAllFilteredSelected ? handleDeselectAllFiltered : handleSelectAllFiltered}
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-tight"
+                        >
+                            {areAllFilteredSelected ? 'Снять выделение' : `Выбрать все (${filteredProducts.length})`}
+                        </button>
+                    )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
-                    <input type="text" placeholder="Filter by name..." value={state.nameFilter} onChange={e => onUpdate({ ...state, nameFilter: e.target.value })} className={inputStyles} />
-                    <input type="text" placeholder="Filter by brand..." value={state.brandFilter} onChange={e => onUpdate({ ...state, brandFilter: e.target.value })} className={inputStyles} />
+                    <input type="text" placeholder="Фильтр по названию..." value={state.nameFilter} onChange={e => onUpdate({ ...state, nameFilter: e.target.value })} className={inputStyles} />
+                    <input type="text" placeholder="Фильтр по бренду..." value={state.brandFilter} onChange={e => onUpdate({ ...state, brandFilter: e.target.value })} className={inputStyles} />
                 </div>
                 {allProducts.length > 0 ? (
                     <ul className="border border-gray-200 dark:border-gray-700 rounded-md divide-y divide-gray-200 dark:divide-gray-700 max-h-40 overflow-y-auto">
@@ -103,7 +129,7 @@ const SetCreator: React.FC<{
                             </li>
                         ))}
                     </ul>
-                ) : <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">No products available.</p>}
+                ) : <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Товары не найдены.</p>}
             </div>
         </div>
     );
