@@ -11,30 +11,33 @@ interface ModerationStatusModalProps {
 }
 
 const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
-  if (!status) return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 uppercase">None</span>;
+  if (!status) return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 uppercase">No Data</span>;
 
   const s = status.toLowerCase();
 
-  // Handle various status strings from different FB API fields
-  if (['approved', 'published', 'active', 'passed'].includes(s)) {
+  // Approved states
+  if (['approved', 'published', 'active', 'passed', 'ready_for_ads'].includes(s)) {
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 uppercase">Approved</span>;
   }
   
-  if (['pending', 'pending_review', 'under_review', 'processing', 'review_pending'].includes(s)) {
+  // Pending states
+  if (['pending', 'pending_review', 'under_review', 'processing', 'review_pending', 'staging', 'ready_for_review'].includes(s)) {
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 uppercase">Pending</span>;
   }
 
-  if (['rejected', 'disapproved', 'failed', 'error', 'hidden', 'inactive'].includes(s)) {
+  // Rejected states
+  if (['rejected', 'disapproved', 'failed', 'error', 'hidden', 'inactive', 'policy_violation'].includes(s)) {
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 uppercase">Rejected</span>;
   }
 
+  // Stock states
   if (['out_of_stock', 'discontinued'].includes(s)) {
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 uppercase">Out of Stock</span>;
   }
 
-  // Fallback: show the actual string from API
+  // Fallback: show the actual string from API (it's often better than nothing)
   return (
-    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 uppercase truncate max-w-[100px]" title={status}>
+    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 uppercase truncate max-w-[120px]" title={status}>
       {status}
     </span>
   );
@@ -60,13 +63,10 @@ export const ModerationStatusModal: React.FC<ModerationStatusModalProps> = ({ on
     }
   }, [products, service]);
 
-  // Refresh on mount if statuses are mostly missing
+  // Refresh on mount to ensure we have latest data
   useEffect(() => {
-    const missing = products.filter(p => !p.reviewStatus).length;
-    if (missing > products.length / 2) {
-        refreshStatuses();
-    }
-  }, [refreshStatuses, products]);
+    refreshStatuses();
+  }, [refreshStatuses]);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
@@ -74,7 +74,7 @@ export const ModerationStatusModal: React.FC<ModerationStatusModalProps> = ({ on
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Moderation Status</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Reviewing {products.length} products</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Reviewing {products.length} items</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
