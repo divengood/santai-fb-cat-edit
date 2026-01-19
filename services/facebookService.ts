@@ -212,8 +212,14 @@ class FacebookCatalogService {
             if (res.code === 200) {
                 try {
                     const body = JSON.parse(res.body);
+                    // Detailed log to debug actual Facebook response structure
+                    console.debug(`Status refresh for ${productIds[index]}:`, body);
                     statusMap.set(productIds[index], body.review_status);
-                } catch (e) {}
+                } catch (e) {
+                    console.error("Failed to parse status body", res.body, e);
+                }
+            } else {
+                console.warn(`Failed to refresh status for ${productIds[index]}. Code: ${res.code}`);
             }
         });
         

@@ -10,18 +10,27 @@ interface ModerationStatusModalProps {
   products: Product[];
 }
 
-const StatusBadge: React.FC<{ status?: Product['reviewStatus'] }> = ({ status }) => {
-  switch (status) {
+const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+  if (!status) return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 uppercase">Unknown</span>;
+
+  const normalizedStatus = status.toLowerCase();
+
+  switch (normalizedStatus) {
     case 'approved':
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 uppercase">Approved</span>;
     case 'pending':
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 uppercase">Pending</span>;
     case 'rejected':
+    case 'disapproved':
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 uppercase">Rejected</span>;
     case 'out_of_stock':
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 uppercase">Out of Stock</span>;
     default:
-      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 uppercase">Unknown</span>;
+      return (
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 uppercase">
+          {status}
+        </span>
+      );
   }
 };
 
