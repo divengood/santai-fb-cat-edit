@@ -93,6 +93,26 @@ export const BulkEditProductsModal: React.FC<BulkEditProductsModalProps> = ({ on
     logger?.info(`Applied "${field}" from first product to all other rows.`);
   };
 
+  const setLastImageAsMainForAll = () => {
+    setProductRows(currentRows => currentRows.map(row => {
+        if (row.images.length === 0) return row;
+        
+        // Find the index of the last successful image
+        const lastSuccessIdx = row.images.reduce((last, img, idx) => 
+            img.status === 'success' ? idx : last, -1);
+            
+        if (lastSuccessIdx === -1) return row;
+
+        const updatedImages = row.images.map((img, idx) => ({
+            ...img,
+            isMain: idx === lastSuccessIdx
+        }));
+
+        return { ...row, images: updatedImages };
+    }));
+    logger?.info("Set the last successful image as main for all product rows.");
+  };
+
   const handleVideoFileChange = async (index: number, file: File | null) => {
     if (!file) {
         handleProductChange(index, 'videoUrl', '');
@@ -177,13 +197,28 @@ export const BulkEditProductsModal: React.FC<BulkEditProductsModalProps> = ({ on
           </button>
         </div>
         
-        <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-2 border-b border-blue-100 dark:border-blue-800 flex flex-wrap gap-2 items-center text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-tighter">
-            <span>Quick Apply from 1st Row:</span>
-            <button type="button" onClick={() => applyToAll('brand')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Brand</button>
-            <button type="button" onClick={() => applyToAll('price')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Price</button>
-            <button type="button" onClick={() => applyToAll('currency')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Currency</button>
-            <button type="button" onClick={() => applyToAll('inventory')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Quantity</button>
-            <button type="button" onClick={() => applyToAll('images')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">All Images</button>
+        <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-2 border-b border-blue-100 dark:border-blue-800 flex flex-wrap gap-x-4 gap-y-2 items-center text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-tighter">
+            <div className="flex items-center gap-2">
+                <span>Bulk Actions:</span>
+                <button 
+                  type="button" 
+                  onClick={setLastImageAsMainForAll} 
+                  className="px-2 py-1 bg-blue-600 text-white border border-blue-700 rounded hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  Last Image as Main
+                </button>
+            </div>
+            
+            <div className="w-px h-4 bg-blue-200 dark:bg-blue-800 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+                <span>Sync from 1st Row:</span>
+                <button type="button" onClick={() => applyToAll('brand')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Brand</button>
+                <button type="button" onClick={() => applyToAll('price')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Price</button>
+                <button type="button" onClick={() => applyToAll('currency')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Currency</button>
+                <button type="button" onClick={() => applyToAll('inventory')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">Quantity</button>
+                <button type="button" onClick={() => applyToAll('images')} className="px-2 py-1 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-100 transition-colors">All Images</button>
+            </div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
