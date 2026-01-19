@@ -38,34 +38,6 @@ class FacebookCatalogService {
     return errorBody?.error && (errorBody.error.type === 'OAuthException' || errorBody.error.code === 1);
   }
 
-  // Helper to extract review status from various possible FB API structures
-  private extractReviewStatus(p: any): string | undefined {
-    // 1. Direct field (common in older API/specific catalogs)
-    if (typeof p.review_status === 'string' && p.review_status) return p.review_status;
-    
-    // 2. Nested in commerce_review_status object
-    if (p.commerce_review_status) {
-        if (typeof p.commerce_review_status === 'string') return p.commerce_review_status;
-        if (p.commerce_review_status.review_status) return p.commerce_review_status.review_status;
-    }
-
-    // 3. Capability review status
-    if (p.capability_review_status) {
-        if (typeof p.capability_review_status === 'string') return p.capability_review_status;
-    }
-
-    // 4. Validation status object
-    if (p.validation_status?.status) return p.validation_status.status;
-
-    // 5. General status (sometimes contains 'approved'/'disapproved')
-    if (typeof p.status === 'string' && p.status && !['active', 'staging'].includes(p.status.toLowerCase())) return p.status;
-
-    // 6. Last resort: If visibility is 'staging' it often means it's pending review
-    if (p.visibility === 'staging') return 'pending_review';
-
-    return undefined;
-  }
-
   private async apiRequest(path: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: object | string, queryParams?: { [key: string]: any }) {
     const url = new URL(`${BASE_URL}${path}`);
     url.searchParams.append('access_token', this.apiToken);
@@ -170,11 +142,9 @@ class FacebookCatalogService {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
     
-    // We request ALL possible status fields to be absolutely sure
     const fields = [
         'id', 'retailer_id', 'name', 'description', 'brand', 'url', 'price', 'currency', 
-        'image_url', 'additional_image_urls', 'inventory', 'video_url', 
-        'review_status', 'commerce_review_status', 'validation_status', 'capability_review_status', 'status', 'visibility'
+        'image_url', 'additional_image_urls', 'inventory', 'video_url'
     ].join(',');
 
     let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=${fields}&limit=100&access_token=${this.apiToken}`;
@@ -207,74 +177,25 @@ class FacebookCatalogService {
             }
         }
         
-        const products: Product[] = allProductsData.map((p: any) => {
-            const status = this.extractReviewStatus(p);
-            
-            return {
-                id: p.id,
-                retailer_id: p.retailer_id,
-                name: p.name,
-                description: p.description,
-                brand: p.brand,
-                link: p.url,
-                price: (parseFloat(p.price) || 0) / 100,
-                currency: p.currency,
-                imageUrl: p.image_url,
-                additionalImageUrls: p.additional_image_urls || [],
-                inventory: p.inventory || 0,
-                videoUrl: p.video_url,
-                reviewStatus: status,
-            };
-        });
+        const products: Product[] = allProductsData.map((p: any) => ({
+            id: p.id,
+            retailer_id: p.retailer_id,
+            name: p.name,
+            description: p.description,
+            brand: p.brand,
+            link: p.url,
+            price: (parseFloat(p.price) || 0) / 100,
+            currency: p.currency,
+            imageUrl: p.image_url,
+            additionalImageUrls: p.additional_image_urls || [],
+            inventory: p.inventory || 0,
+            videoUrl: p.video_url
+        }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
         return products;
     } catch (error) {
         this.logger?.error("Failed to fetch products", error);
-        throw error;
-    }
-  }
-
-  async refreshProductStatuses(productIds: string[]): Promise<Map<string, Product['reviewStatus']>> {
-    if (productIds.length === 0) return new Map();
-    this.logger?.info(`Refreshing moderation statuses for ${productIds.length} product(s)...`);
-    
-    // Request multiple fields in batch to ensure we get some status info
-    const fields = 'review_status,commerce_review_status,validation_status,capability_review_status,status,visibility';
-    const requests: BatchRequest[] = productIds.map(id => ({
-        method: 'GET',
-        relative_url: `${id}?fields=${fields}`
-    }));
-
-    try {
-        const batchResponses = await this.batchRequest(requests);
-        const statusMap = new Map<string, Product['reviewStatus']>();
-        
-        batchResponses.forEach((res: any, index: number) => {
-            if (res.code === 200) {
-                try {
-                    const body = JSON.parse(res.body);
-                    const status = this.extractReviewStatus(body);
-                    
-                    if (!status) {
-                        console.debug(`No status found for product ${productIds[index]}. Full record:`, body);
-                    } else {
-                        console.debug(`Status found for product ${productIds[index]}: ${status}`);
-                    }
-                    
-                    statusMap.set(productIds[index], status);
-                } catch (e) {
-                    console.error("Failed to parse status body", res.body, e);
-                }
-            } else {
-                console.warn(`Failed to refresh status for ${productIds[index]}. Code: ${res.code}`);
-            }
-        });
-        
-        this.logger?.success(`Refreshed statuses for ${statusMap.size} products.`);
-        return statusMap;
-    } catch (error) {
-        this.logger?.error("Failed to refresh product statuses", error);
         throw error;
     }
   }

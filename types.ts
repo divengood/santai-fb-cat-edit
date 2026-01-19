@@ -12,7 +12,6 @@ export interface Product {
   additionalImageUrls?: string[]; // Secondary images
   inventory: number;
   videoUrl?: string;
-  reviewStatus?: string;
 }
 
 export interface ProductSet {
@@ -21,7 +20,7 @@ export interface ProductSet {
   productIds: string[];
 }
 
-export type NewProduct = Omit<Product, 'id' | 'reviewStatus'>;
+export type NewProduct = Omit<Product, 'id'>;
 
 export enum ToastType {
     SUCCESS = 'SUCCESS',

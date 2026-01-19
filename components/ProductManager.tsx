@@ -9,7 +9,6 @@ import { BulkAddProductsModal } from './BulkAddProductsModal';
 import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
 import { EditProductModal } from './EditProductModal';
-import { ModerationStatusModal } from './ModerationStatusModal';
 
 const COIN_SOUND_URL = 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_165a995381.mp3?filename=coins-100142.mp3';
 
@@ -28,7 +27,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [isCreatingSets, setIsCreatingSets] = useState(false);
     const [nameFilter, setNameFilter] = useState('');
     const [brandFilter, setBrandFilter] = useState('');
@@ -62,11 +60,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
             return nameMatch && brandMatch;
         });
     }, [products, nameFilter, brandFilter]);
-
-    const productsForStatus = useMemo(() => {
-        if (selectedProducts.size === 0) return filteredProducts;
-        return products.filter(p => selectedProducts.has(p.id));
-    }, [products, selectedProducts, filteredProducts]);
 
     const handleDeleteSelected = async () => {
         if (selectedProducts.size === 0) return;
@@ -157,15 +150,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                         Add Products
                     </button>
                     <button
-                        onClick={() => setIsStatusModalOpen(true)}
-                        className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Moderation Status
-                    </button>
-                    <button
                         onClick={handleCreateSetsFromSelection}
                         disabled={selectedProducts.size === 0 || isCreatingSets}
                         className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
@@ -235,14 +219,6 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
                     logger={logger}
-                />
-            )}
-
-            {isStatusModalOpen && (
-                <ModerationStatusModal
-                    onClose={() => setIsStatusModalOpen(false)}
-                    service={service}
-                    products={productsForStatus}
                 />
             )}
         </div>
