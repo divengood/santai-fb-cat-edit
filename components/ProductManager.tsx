@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import { ProductList } from './ProductList';
 import { Spinner } from './Spinner';
 import { BulkAddProductsModal } from './BulkAddProductsModal';
+import { BulkEditProductsModal } from './BulkEditProductsModal';
 import { ToastContainer } from './ToastContainer';
 import { Logger } from '../services/loggingService';
 import { EditProductModal } from './EditProductModal';
@@ -26,6 +27,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
     const [loading, setLoading] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isCreatingSets, setIsCreatingSets] = useState(false);
     const [nameFilter, setNameFilter] = useState('');
@@ -60,6 +62,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
             return nameMatch && brandMatch;
         });
     }, [products, nameFilter, brandFilter]);
+
+    const selectedProductList = useMemo(() => {
+        return products.filter(p => selectedProducts.has(p.id));
+    }, [products, selectedProducts]);
 
     const handleDeleteSelected = async () => {
         if (selectedProducts.size === 0) return;
@@ -150,6 +156,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                         Add Products
                     </button>
                     <button
+                        onClick={() => setIsBulkEditModalOpen(true)}
+                        disabled={selectedProducts.size < 2}
+                        title={selectedProducts.size < 2 ? "Select at least 2 products to use Mass Edit" : "Edit multiple products at once"}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-indigo-700 transition-colors disabled:bg-indigo-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >
+                        Mass Edit ({selectedProducts.size})
+                    </button>
+                    <button
                         onClick={handleCreateSetsFromSelection}
                         disabled={selectedProducts.size === 0 || isCreatingSets}
                         className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
@@ -160,9 +174,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                     <button
                         onClick={handleDeleteSelected}
                         disabled={selectedProducts.size === 0}
-                         className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                         className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-red-600 dark:text-red-400"
                     >
-                        Delete Selected ({selectedProducts.size})
+                        Delete ({selectedProducts.size})
                     </button>
                 </div>
             </div>
@@ -201,6 +215,22 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ apiToken, catalo
                         playSound(COIN_SOUND_URL);
                     }}
                     existingProducts={products}
+                    cloudinaryCloudName={cloudinaryCloudName}
+                    cloudinaryUploadPreset={cloudinaryUploadPreset}
+                    logger={logger}
+                />
+            )}
+
+            {isBulkEditModalOpen && (
+                <BulkEditProductsModal
+                    onClose={() => setIsBulkEditModalOpen(false)}
+                    service={service}
+                    selectedProducts={selectedProductList}
+                    onProductsUpdated={() => {
+                        fetchProducts();
+                        addToast('Selected products updated successfully!', ToastType.SUCCESS);
+                        playSound(COIN_SOUND_URL);
+                    }}
                     cloudinaryCloudName={cloudinaryCloudName}
                     cloudinaryUploadPreset={cloudinaryUploadPreset}
                     logger={logger}

@@ -330,6 +330,52 @@ class FacebookCatalogService {
     }
   }
 
+  async updateProductsBatch(updates: { id: string, data: Partial<NewProduct> }[]): Promise<any> {
+    if (updates.length === 0) return [];
+    this.logger?.info(`Attempting to bulk update ${updates.length} product(s)...`);
+
+    const requests: BatchRequest[] = updates.map(update => {
+        const p = update.data;
+        const params = new URLSearchParams();
+        
+        if (p.name !== undefined) params.append('name', p.name);
+        if (p.description !== undefined) params.append('description', p.description);
+        if (p.brand !== undefined) params.append('brand', p.brand);
+        if (p.link !== undefined) params.append('url', p.link);
+        if (p.price !== undefined) params.append('price', String(Math.round(Number(p.price) * 100)));
+        if (p.currency !== undefined) params.append('currency', p.currency);
+        if (p.imageUrl !== undefined) params.append('image_url', p.imageUrl);
+        if (p.additionalImageUrls !== undefined) params.append('additional_image_urls', JSON.stringify(p.additionalImageUrls));
+        if (p.videoUrl !== undefined) params.append('video_url', p.videoUrl);
+        if (p.inventory !== undefined) {
+            const inv = Number(p.inventory) || 0;
+            params.append('inventory', String(inv));
+            params.append('availability', inv > 0 ? 'in stock' : 'out of stock');
+        }
+
+        return {
+            method: 'POST',
+            relative_url: `${update.id}?scrape=true`,
+            body: params.toString(),
+        };
+    });
+
+    try {
+        const batchResponses = await this.batchRequest(requests);
+        const failures = batchResponses.filter((res: any) => res && res.code !== 200);
+
+        if (failures.length > 0) {
+            throw new Error(`${failures.length} products failed to update in batch.`);
+        }
+
+        this.logger?.success(`Successfully updated ${updates.length} products in batch.`);
+        return batchResponses;
+    } catch (error) {
+        this.logger?.error("Failed to update products batch", error);
+        throw error;
+    }
+  }
+
   async updateProduct(productId: string, updates: Partial<NewProduct>): Promise<any> {
     this.logger?.info(`Updating product ID: ${productId}...`);
     
