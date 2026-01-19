@@ -141,7 +141,7 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,additional_image_urls,inventory,video_url&limit=100&access_token=${this.apiToken}`;
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,additional_image_urls,inventory,video_url,review_status&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
@@ -184,12 +184,43 @@ class FacebookCatalogService {
             additionalImageUrls: p.additional_image_urls || [],
             inventory: p.inventory || 0,
             videoUrl: p.video_url,
+            reviewStatus: p.review_status,
         }));
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
         return products;
     } catch (error) {
         this.logger?.error("Failed to fetch products", error);
+        throw error;
+    }
+  }
+
+  async refreshProductStatuses(productIds: string[]): Promise<Map<string, Product['reviewStatus']>> {
+    if (productIds.length === 0) return new Map();
+    this.logger?.info(`Refreshing moderation statuses for ${productIds.length} product(s)...`);
+    
+    const requests: BatchRequest[] = productIds.map(id => ({
+        method: 'GET',
+        relative_url: `${id}?fields=review_status`
+    }));
+
+    try {
+        const batchResponses = await this.batchRequest(requests);
+        const statusMap = new Map<string, Product['reviewStatus']>();
+        
+        batchResponses.forEach((res: any, index: number) => {
+            if (res.code === 200) {
+                try {
+                    const body = JSON.parse(res.body);
+                    statusMap.set(productIds[index], body.review_status);
+                } catch (e) {}
+            }
+        });
+        
+        this.logger?.success(`Refreshed statuses for ${statusMap.size} products.`);
+        return statusMap;
+    } catch (error) {
+        this.logger?.error("Failed to refresh product statuses", error);
         throw error;
     }
   }
