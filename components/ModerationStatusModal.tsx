@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import FacebookCatalogService from '../services/facebookService';
 import { Spinner } from './Spinner';
@@ -11,35 +11,42 @@ interface ModerationStatusModalProps {
 }
 
 const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
-  if (!status) return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 uppercase">Unknown</span>;
+  if (!status) return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 uppercase">None</span>;
 
-  const normalizedStatus = status.toLowerCase();
+  const s = status.toLowerCase();
 
-  switch (normalizedStatus) {
-    case 'approved':
+  // Handle various status strings from different FB API fields
+  if (['approved', 'published', 'active', 'passed'].includes(s)) {
       return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 uppercase">Approved</span>;
-    case 'pending':
-      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 uppercase">Pending</span>;
-    case 'rejected':
-    case 'disapproved':
-      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 uppercase">Rejected</span>;
-    case 'out_of_stock':
-      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 uppercase">Out of Stock</span>;
-    default:
-      return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 uppercase">
-          {status}
-        </span>
-      );
   }
+  
+  if (['pending', 'pending_review', 'under_review', 'processing', 'review_pending'].includes(s)) {
+      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 uppercase">Pending</span>;
+  }
+
+  if (['rejected', 'disapproved', 'failed', 'error', 'hidden', 'inactive'].includes(s)) {
+      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 uppercase">Rejected</span>;
+  }
+
+  if (['out_of_stock', 'discontinued'].includes(s)) {
+      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 uppercase">Out of Stock</span>;
+  }
+
+  // Fallback: show the actual string from API
+  return (
+    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 uppercase truncate max-w-[100px]" title={status}>
+      {status}
+    </span>
+  );
 };
 
 export const ModerationStatusModal: React.FC<ModerationStatusModalProps> = ({ onClose, service, products }) => {
-  const [productStatuses, setProductStatuses] = useState<Map<string, Product['reviewStatus']>>(new Map(products.map(p => [p.id, p.reviewStatus])));
+  const [productStatuses, setProductStatuses] = useState<Map<string, string | undefined>>(new Map(products.map(p => [p.id, p.reviewStatus])));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const refreshStatuses = async () => {
+  const refreshStatuses = useCallback(async () => {
+    if (products.length === 0) return;
     setIsRefreshing(true);
     setError('');
     try {
@@ -51,7 +58,15 @@ export const ModerationStatusModal: React.FC<ModerationStatusModalProps> = ({ on
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [products, service]);
+
+  // Refresh on mount if statuses are mostly missing
+  useEffect(() => {
+    const missing = products.filter(p => !p.reviewStatus).length;
+    if (missing > products.length / 2) {
+        refreshStatuses();
+    }
+  }, [refreshStatuses, products]);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
@@ -59,7 +74,7 @@ export const ModerationStatusModal: React.FC<ModerationStatusModalProps> = ({ on
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Moderation Status</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Review status for {products.length} products</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Reviewing {products.length} products</p>
           </div>
           <div className="flex items-center gap-3">
             <button 

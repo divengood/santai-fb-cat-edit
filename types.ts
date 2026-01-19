@@ -12,7 +12,7 @@ export interface Product {
   additionalImageUrls?: string[]; // Secondary images
   inventory: number;
   videoUrl?: string;
-  reviewStatus?: 'pending' | 'approved' | 'rejected' | 'out_of_stock';
+  reviewStatus?: string;
 }
 
 export interface ProductSet {
@@ -40,6 +40,12 @@ export enum LogLevel {
     SUCCESS = 'SUCCESS',
     ERROR = 'ERROR',
     WARNING = 'WARNING',
+}
+
+export interface ProductLogEntry {
+    timestamp: Date;
+    level: LogLevel;
+    message: string;
 }
 
 export interface LogEntry {

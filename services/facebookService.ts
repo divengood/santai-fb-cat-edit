@@ -141,7 +141,8 @@ class FacebookCatalogService {
   async getProducts(): Promise<Product[]> {
     this.logger?.info("Fetching all products from catalog (with pagination)...");
     let allProductsData: any[] = [];
-    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,additional_image_urls,inventory,video_url,review_status&limit=100&access_token=${this.apiToken}`;
+    // We request multiple status fields to be sure
+    let nextUrl: string | null = `${BASE_URL}/${this.catalogId}/products?fields=id,retailer_id,name,description,brand,url,price,currency,image_url,additional_image_urls,inventory,video_url,review_status,commerce_review_status,validation_status&limit=100&access_token=${this.apiToken}`;
 
     try {
         while (nextUrl) {
@@ -171,21 +172,26 @@ class FacebookCatalogService {
             }
         }
         
-        const products: Product[] = allProductsData.map((p: any) => ({
-            id: p.id,
-            retailer_id: p.retailer_id,
-            name: p.name,
-            description: p.description,
-            brand: p.brand,
-            link: p.url,
-            price: (parseFloat(p.price) || 0) / 100,
-            currency: p.currency,
-            imageUrl: p.image_url,
-            additionalImageUrls: p.additional_image_urls || [],
-            inventory: p.inventory || 0,
-            videoUrl: p.video_url,
-            reviewStatus: p.review_status,
-        }));
+        const products: Product[] = allProductsData.map((p: any) => {
+            // Logic to pick the best review status from available fields
+            const status = p.review_status || (p.commerce_review_status?.review_status) || p.validation_status?.status;
+            
+            return {
+                id: p.id,
+                retailer_id: p.retailer_id,
+                name: p.name,
+                description: p.description,
+                brand: p.brand,
+                link: p.url,
+                price: (parseFloat(p.price) || 0) / 100,
+                currency: p.currency,
+                imageUrl: p.image_url,
+                additionalImageUrls: p.additional_image_urls || [],
+                inventory: p.inventory || 0,
+                videoUrl: p.video_url,
+                reviewStatus: status,
+            };
+        });
         
         this.logger?.success(`Successfully fetched a total of ${products.length} products.`);
         return products;
@@ -199,9 +205,10 @@ class FacebookCatalogService {
     if (productIds.length === 0) return new Map();
     this.logger?.info(`Refreshing moderation statuses for ${productIds.length} product(s)...`);
     
+    // We request multiple fields in batch to ensure we get some status info
     const requests: BatchRequest[] = productIds.map(id => ({
         method: 'GET',
-        relative_url: `${id}?fields=review_status`
+        relative_url: `${id}?fields=review_status,commerce_review_status,validation_status`
     }));
 
     try {
@@ -212,9 +219,11 @@ class FacebookCatalogService {
             if (res.code === 200) {
                 try {
                     const body = JSON.parse(res.body);
-                    // Detailed log to debug actual Facebook response structure
-                    console.debug(`Status refresh for ${productIds[index]}:`, body);
-                    statusMap.set(productIds[index], body.review_status);
+                    // Determine the best status indicator
+                    const status = body.review_status || (body.commerce_review_status?.review_status) || body.validation_status?.status;
+                    
+                    console.debug(`Status for ${productIds[index]}:`, body);
+                    statusMap.set(productIds[index], status);
                 } catch (e) {
                     console.error("Failed to parse status body", res.body, e);
                 }
@@ -236,7 +245,6 @@ class FacebookCatalogService {
      this.logger?.info(`Attempting to add ${newProducts.length} product(s)...`);
      
      const requests: BatchRequest[] = newProducts.map(p => {
-        // Safe price conversion: Ensure it's a number and fallback to 0 if NaN
         const priceInCents = Math.round((Number(p.price) || 0) * 100);
         const inventory = Number(p.inventory) || 0;
 
